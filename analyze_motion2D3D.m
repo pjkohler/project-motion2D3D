@@ -26,23 +26,35 @@ function analyze_motion2D3D(doExp,trialError)
     keepConditions = true;
     errorType = 'SEM';
     for f=1:6
+        fprintf('%d\n',f);
         if f==6
             curRCA = allRCA;
             curIdx = 9:12;
+            doNR = false(4,5,8); % 4 freqs, 5 RCs, 8 conditions
+            doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
         elseif f==5
             curRCA = fullRCA;
             curIdx = 5:8;
+            doNR = false(4,5,8); % 4 freqs, 5 RCs, 8 conditions
         else
             curRCA = freqRCA(f);
             curIdx = f;
+            doNR = false(1,5,8); % 1 freqs, 5 RCs, 8 conditions
         end
-        tempDataStrct = aggregateData(curRCA.data,curRCA.settings,keepConditions,errorType,trialError);
+        tempDataStrct = aggregateData(curRCA.data,curRCA.settings,keepConditions,errorType,trialError,doNR);
         ampVals(:,curIdx,1:5,:) = tempDataStrct.ampBins;
         errLB(:,curIdx,1:5,:)   =tempDataStrct.ampBins-tempDataStrct.ampErrBins(:,:,:,:,1);
         errUB(:,curIdx,1:5,:)   =tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
-        tempNoiseStrct1 = aggregateData(curRCA.noiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError);
-        tempNoiseStrct2 = aggregateData(curRCA.noiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError);
+        tempNoiseStrct1 = aggregateData(curRCA.noiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
+        tempNoiseStrct2 = aggregateData(curRCA.noiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
         [snrVals(:,curIdx,1:5,:),noiseVals(:,curIdx,1:5,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
+        NR_pOpt(:,curIdx,1:5,:) = tempDataStrct.NakaRushton.pOpt;
+        NR_JKSE(:,curIdx,1:5,:) = tempDataStrct.NakaRushton.JKSE;
+        NR_R2(curIdx,1:5,:) = tempDataStrct.NakaRushton.R2;
+        if ~isempty(tempDataStrct.NakaRushton.hModel) && ~exist('hModel','var')
+            hModel = tempDataStrct.NakaRushton.hModel;
+        else
+        end
 
         % COMPARISON
         tempDataStrct = aggregateData(curRCA.comparisonData,curRCA.settings,keepConditions,errorType,trialError);
@@ -51,12 +63,18 @@ function analyze_motion2D3D(doExp,trialError)
         errUB(:,curIdx,6,:)=tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
         tempNoiseStrct1 = aggregateData(curRCA.comparisonNoiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError);
         tempNoiseStrct2 = aggregateData(curRCA.comparisonNoiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError);
-        [snrVals(:,curIdx,6,:),noiseVals(:,curIdx,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
+        [snrVals(:,curIdx,6,:),noiseVals(:,curIdx,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2);
+        
+        NR_pOpt(:,curIdx,6,:) = tempDataStrct.NakaRushton.pOpt;
+        NR_JKSE(:,curIdx,6,:) = tempDataStrct.NakaRushton.JKSE;
+        NR_R2(curIdx,6,:) = tempDataStrct.NakaRushton.R2;
     end
 
     freqRCA(5:8) = fullRCA; % repeat fullRCA, this is only done to preserve topographies in the code below
     freqRCA(9:12) = allRCA; % repeat allRCA, this is only done to preserve topographies in the code below
-
+    
+    % shut down parallel pool, which was used for fitting Naka-Rushton
+    delete(gcp('nocreate'));
 
     %% PLOT RCs
     close all;
@@ -85,6 +103,23 @@ function analyze_motion2D3D(doExp,trialError)
     condLabels = repmat({'rel-Mot','abs-Mot','rel-Disp','abs-Disp'},1,2);
     condLabels = condLabels(condsToUse);
     xMin = .4; xMax = 18;
+    
+    
+    % Get parameter standard errors
+%     if logScale
+%         % put c50 back in original units
+%         pA1(1,:) = 10.^pA1(1,:) / fx;
+%         pA2(1,:) = 10.^pA2(1,:) / fx;
+%         pN( 1,:) = 10.^pN( 1,:) / fx;
+%         pA1jk(1,:) = 10.^pA1jk(1,:) / fx;
+%         pA2jk(1,:) = 10.^pA2jk(1,:) / fx;
+%         pNjk( 1,:) = 10.^pNjk( 1,:) / fx;
+%         fprintf( '\nFIT LOG10( %g * OFFSET )\n', fx )
+%     else
+%         fprintf( '\nFIT LINEAR OFFSET\n' )
+%     end
+
+    
 
     for f=1:nFreq
         if strcmp(rcaType,'all'); 
@@ -122,18 +157,29 @@ function analyze_motion2D3D(doExp,trialError)
                 for c=1:length(curConds)
                     if plotSNR
                         valSet = snrVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,snrVals(:,curFreq,r,curConds(c)),'-','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
+                        ampH(c)=plot(binVals,snrVals(:,curFreq,r,curConds(c)),'o','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
                         plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
                     else
                         valSet = ampVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),'-','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
+                        ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),'o','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
                         %plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
                         %errorbar(binVals,ampVals(:,curFreq,r,curConds(c)),errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c)),'Color',subColors(curConds(c),:),'LineWidth',lWidth);
                         hE = ErrorBars(binVals',ampVals(:,curFreq,r,curConds(c)),[errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth*1.5);
                         cellfun(@(x) uistack(x,'bottom'), hE);
                         hold on
-                    end                    
+                    end
+                    if ~isnan(NR_pOpt(1,curFreq,r,curConds(c)))
+                        % plot Naka-Rushton
+                        nFine = 1e2;
+                        nrX = linspace( min(binVals), max(binVals), nFine )';
+                        nrVals = hModel( nrX, NR_pOpt(:,curFreq,r,curConds(c)));
+                        plot( nrX, nrVals, '-k', 'LineWidth',lWidth);
+                    else
+                    end
                 end
+                
+                % plot Naka-Rushton
+                % 
 
                 if f == 2 && r == 1
                     yUnit = 1;
