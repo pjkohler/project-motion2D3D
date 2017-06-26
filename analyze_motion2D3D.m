@@ -14,7 +14,7 @@ function analyze_motion2D3D(doExp,trialError)
     else
     end
     if nargin < 2
-        trialError = true;
+        trialError = false;
     else
     end
     
@@ -157,11 +157,11 @@ function analyze_motion2D3D(doExp,trialError)
                 for c=1:length(curConds)
                     if plotSNR
                         valSet = snrVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,snrVals(:,curFreq,r,curConds(c)),'o','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
+                        ampH(c)=plot(binVals,snrVals(:,curFreq,r,curConds(c)),'-','MarkerSize',5,'LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
                         plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
                     else
                         valSet = ampVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),'o','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
+                        ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),'-','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
                         %plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
                         %errorbar(binVals,ampVals(:,curFreq,r,curConds(c)),errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c)),'Color',subColors(curConds(c),:),'LineWidth',lWidth);
                         hE = ErrorBars(binVals',ampVals(:,curFreq,r,curConds(c)),[errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth*1.5);
@@ -178,9 +178,6 @@ function analyze_motion2D3D(doExp,trialError)
                     end
                 end
                 
-                % plot Naka-Rushton
-                % 
-
                 if f == 2 && r == 1
                     yUnit = 1;
                     yMax = 5.0;
@@ -291,6 +288,15 @@ function analyze_motion2D3D(doExp,trialError)
             end
         else
         end
-    end    
+    end
+    %% PLOT FIT ERRORS
+    figure;
+    hold on
+    harmToPlot = 2;
+    meanToPlot = squeeze(NR_pOpt(1,8+harmToPlot,1,:)); 
+    errToPlot = squeeze(NR_JKSE(1,8+harmToPlot,1,:)); 
+    plot(meanToPlot,'-ko');
+    errorb(1:8,meanToPlot,errToPlot);
+    hold off
     close all;
 end
