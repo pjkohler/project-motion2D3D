@@ -147,11 +147,15 @@ function analyze_motion2D3D(doExp,trialError)
                 if s==1
                     sH(f,r,1) = subplot(nComp+1,3,1+(r-1)*3);
                     curConds = find(ismember(condsToUse,1:4));
-                    titleStr = sprintf('horizontal: %s',fullRCA.settings.freqLabels{f});
+                    % grab frequency labels from condition 1, 
+                    % will be the same for all conditions
+                    titleStr = sprintf('horizontal: %s',freqRCA(curFreq).settings.freqLabels{1}{f});
                 else
                     sH(f,r,2) = subplot(nComp+1,3,2+(r-1)*3);
                     curConds = find(ismember(condsToUse,5:8));
-                    titleStr = sprintf('vertical: %s',fullRCA.settings.freqLabels{f});
+                    % grab frequency labels from condition 1, 
+                    % will be the same for all conditions
+                    titleStr = sprintf('vertical: %s',freqRCA(curFreq).settings.freqLabels{1}{f});
                 end
                 hold on
                 for c=1:length(curConds)
@@ -164,7 +168,7 @@ function analyze_motion2D3D(doExp,trialError)
                         ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),'-','LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:));
                         %plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
                         %errorbar(binVals,ampVals(:,curFreq,r,curConds(c)),errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c)),'Color',subColors(curConds(c),:),'LineWidth',lWidth);
-                        hE = ErrorBars(binVals',ampVals(:,curFreq,r,curConds(c)),[errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth*1.5);
+                        hE = ErrorBars(binVals,ampVals(:,curFreq,r,curConds(c)),[errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth*1.5);
                         cellfun(@(x) uistack(x,'bottom'), hE);
                         hold on
                     end
@@ -197,7 +201,7 @@ function analyze_motion2D3D(doExp,trialError)
                 % plot noise patch
                 meanNoise = max(noiseVals(:,curFreq,r,curConds),[],4)';
                 yNoiseVals = [0,meanNoise(1),meanNoise,meanNoise(end),0]; % start and end points just repeats of first and last
-                xNoiseVals = [xMin,xMin,binVals,xMax,xMax];
+                xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
                 pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
                 uistack(pH,'bottom')
 
