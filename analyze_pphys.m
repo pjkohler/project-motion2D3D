@@ -1,10 +1,14 @@
-function analyze_pphys(expNum,taskFig)
+function analyze_pphys(expNum,taskFig,logConvert)
     if nargin < 1
         expNum = 1;
     else
     end
     if nargin < 2
         taskFig = true;
+    else
+    end
+    if nargin < 3
+        logConvert = true;
     else
     end
         
@@ -25,12 +29,6 @@ function analyze_pphys(expNum,taskFig)
     subPaths = subfolders(sprintf('%s/*20*',dataPath),1);
     % NOTE! should be path corresponding to blank
     rcaPath = sprintf('%s/figures/exp1',topPath);
-
-    if expNum == 2    
-        subPaths = subPaths( cell2mat(cellfun(@(x) isempty(strfind(x,'nl-1076')),subPaths,'uni',false)) );
-    else
-    end
-    
     savePath = sprintf('%s/figures/pphys%0.0f',topPath,expNum);
     % string for saving the data
     saveStr = datestr(clock,26);
@@ -51,6 +49,7 @@ function analyze_pphys(expNum,taskFig)
                         'VertD3D','VertD2D','HoriD3D','HoriD2D', ...
                         'VertA3D','VertA2D','HoriA3D','HoriA2D'};
         rcaLabels = {'Asc. rel-Mot','Desc. rel-Mot','Asc. rel-Disp','Desc. rel-Disp'};
+        pphysLabels = {'rel-Mot','rel-Disp'};
     elseif expNum == 2
         sweepValues = [0.5000,0.7349,1.0801,1.5874,2.3331,3.4290,5.0397,7.4070,10.8863,16.0000];
         % reordering for experiment 2
@@ -59,6 +58,7 @@ function analyze_pphys(expNum,taskFig)
                         'VertD3D','VertD2D','HoriD3D','HoriD2D', ...
                         'catch','catch','catch','catch'};
         rcaLabels = {'Asc. abs-Mot','Desc. abs-Mot','Asc. abs-Disp','Desc. abs-Disp'};
+        pphysLabels = {'abs-Mot','abs-Disp'};
     end
     [lia,reorderIdx]=ismember(falseOrder,[condLabels,'catch']); % capture catch trials from experiment 2 as 9th condition
 
@@ -130,7 +130,7 @@ function analyze_pphys(expNum,taskFig)
         else
         end
         
-        % pre-generate respData matrixb
+        % pre-generate respData matrix
         subTrials(s) = size(subData,1);
         if ~exist('respData','var')
             respData = NaN(subTrials(s),4,numSubs);
@@ -152,6 +152,10 @@ function analyze_pphys(expNum,taskFig)
                 % if descending
                 respData(curIdx,4,s) = sweepConvert( coreDuration,[min(sweepValues),max(sweepValues)],respData(curIdx,3,s) );
             end
+            if logConvert
+                respData(curIdx,4,s) = reallog(respData(curIdx,4,s));
+            else
+            end
             aveTime(c,s) = mean(respData(~misIdx(:,s) & curIdx,3,s));
             aveStim(c,s) = mean(respData(~misIdx(:,s) & curIdx,4,s));
         end
@@ -165,7 +169,7 @@ function analyze_pphys(expNum,taskFig)
     % exclude subs with more than 15% misses
     includeIdx = mean(percMis) < .15;
     includeSubs = length(find(includeIdx));
-    
+   
     aveBoth = (aveStim(1:2:end,:)+aveStim(2:2:end,:))./2;
     bothGrand = nanmean(aveBoth(:,includeIdx),2);
     bothStderr = nanstd(aveBoth(:,includeIdx),0,2)./sqrt(includeSubs);
@@ -177,10 +181,14 @@ function analyze_pphys(expNum,taskFig)
     %% PLOT PPHYS
     lWidth = 1.5;
     fSize = 12;
-    if expNum == 1
-        yMax = 2;
+    if logConvert
+        baseVal = reallog(.1);
+        yMin = reallog(.1); yMax = reallog(10);
+        logOpts = {'ytick',reallog([.1,.25,.5,1,2,10]),'yticklabel',[.1,.25,.5,1,2,10]};
     else
-        yMax = 8;
+        baseVal = 0;
+        yMin = 0; yMax = 8;
+        logOpts ={'ytick',yMin:1:yMax};
     end
     gcaOpts = {'tickdir','out','ticklength',[0.025,0.025],'box','off','fontsize',fSize,'fontname','Arial','linewidth',lWidth};
     cBrewer = load('colorBrewer.mat');
@@ -192,36 +200,37 @@ function analyze_pphys(expNum,taskFig)
     hold on
     for z = 1:8
         if isempty(strfind(condLabels{z},'3D'));
-            h2D = bar(z,stimGrand(z),'facecolor',color1(1,:),'edgecolor','none');
+            h2D = bar(z,stimGrand(z),'facecolor',color1(1,:),'edgecolor','none','basevalue',baseVal);
         else
-            h3D = bar(z,stimGrand(z),'facecolor',color2(1,:),'edgecolor','none');
+            h3D = bar(z,stimGrand(z),'facecolor',color2(1,:),'edgecolor','none','basevalue',baseVal);
         end
     end
     errorb(1:8,stimGrand,stimStderr);
-    set(gca,gcaOpts{:},'xtick',[2.5,6.5],'xticklabel',{'Horizontal','Vertical'});
-    legend([h2D,h3D],{'rel-Mot','rel-Disp'},'location','northwest','fontsize',fSize,'fontname','Arial');
-    legend boxoff;
-    plot(1:2:length(conditions),ones(1,length(conditions)/2).*.2,'k^','LineWidth',lWidth,'markerfacecolor',[1 1 1],'markeredgecolor','none','MarkerSize',10);
-    plot(2:2:length(conditions),ones(1,length(conditions)/2).*.2,'kv','LineWidth',lWidth,'markerfacecolor',[1 1 1],'markeredgecolor','none','MarkerSize',10);
+    set(gca,gcaOpts{:},'xtick',[2.5,6.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+    
+    %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
+    %legend boxoff;
+    plot(1:2:length(conditions),ones(1,length(conditions)/2).*-1.5,'k^','LineWidth',lWidth,'markerfacecolor',[1 1 1],'markeredgecolor','none','MarkerSize',10);
+    plot(2:2:length(conditions),ones(1,length(conditions)/2).*-1.5,'kv','LineWidth',lWidth,'markerfacecolor',[1 1 1],'markeredgecolor','none','MarkerSize',10);
 
     hold off
     xlim([.5,8.5]);
-    ylim([0,yMax]);
+    ylim([yMin,yMax]);
     ylabel('Displacement (arcmins)','fontsize',fSize,'fontname','Arial')
     subplot(1,2,2);
     hold on
     for z = 1:4
         if isempty(strfind(bothLabels{z},'3D'));
-            h2D = bar(z,bothGrand(z),'facecolor',color1(1,:),'edgecolor','none');
+            h2D = bar(z,bothGrand(z),'facecolor',color1(1,:),'edgecolor','none','basevalue',baseVal);
         else
-            h3D = bar(z,bothGrand(z),'facecolor',color2(1,:),'edgecolor','none');
+            h3D = bar(z,bothGrand(z),'facecolor',color2(1,:),'edgecolor','none','basevalue',baseVal);
         end
     end
     errorb(1:4,bothGrand,bothStderr);
     xlim([.5,4.5]);
-    ylim([0,yMax]);
-    set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'});
-    legend([h2D,h3D],{'rel-Mot','rel-Disp'},'location','northwest','fontsize',fSize,'fontname','Arial');
+    ylim([yMin,yMax]);
+    set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+    legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
     legend boxoff;
     hold off
     set(gcf, 'units', 'centimeters');
