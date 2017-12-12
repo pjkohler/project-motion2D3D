@@ -73,6 +73,9 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
             readyRCA(curIdx).stats.NR_JKSE(:,1:5,:) = rcStruct.NakaRushton.JKSE(:,i,:,:);
             readyRCA(curIdx).stats.NR_R2(1:5,:) = rcStruct.NakaRushton.R2(:,i,:,:);
             readyRCA(curIdx).stats.hModel = rcStruct.NakaRushton.hModel;
+            readyRCA(curIdx).stats.tSqrdP(:,1:5,:) = rcStruct.tSqrdP(:,i,:,:);
+            readyRCA(curIdx).stats.tSqrdSig(:,1:5,:) = rcStruct.tSqrdSig(:,i,:,:);
+            readyRCA(curIdx).stats.tSqrdVal(:,1:5,:) = rcStruct.tSqrdVal(:,i,:,:);
             
             % COMPARISON
             readyRCA(curIdx).stats.ampVals(:,6,:) = compStruct.ampBins(:,i,:,:);
@@ -83,6 +86,9 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
             readyRCA(curIdx).stats.NR_pOpt(:,6,:) = compStruct.NakaRushton.pOpt(:,i,:,:);
             readyRCA(curIdx).stats.NR_JKSE(:,6,:) = compStruct.NakaRushton.JKSE(:,i,:,:);
             readyRCA(curIdx).stats.NR_R2(6,:) = compStruct.NakaRushton.R2(:,i,:,:);
+            readyRCA(curIdx).stats.tSqrdP(:,6,:) = compStruct.tSqrdP(:,i,:,:);
+            readyRCA(curIdx).stats.tSqrdSig(:,6,:) = compStruct.tSqrdSig(:,i,:,:);
+            readyRCA(curIdx).stats.tSqrdVal(:,6,:) = compStruct.tSqrdVal(:,i,:,:);
         end
          
         

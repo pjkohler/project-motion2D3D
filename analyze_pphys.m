@@ -1,4 +1,4 @@
-function analyze_pphys(expNum,taskFig,logConvert)
+function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     if nargin < 1
         expNum = 1;
     else
@@ -11,7 +11,24 @@ function analyze_pphys(expNum,taskFig,logConvert)
         logConvert = true;
     else
     end
-        
+    if nargin < 4
+        rcaType = 'freq';
+    else
+    end
+    if nargin < 5
+        flipEEG = true;
+    else
+    end
+    if nargin < 6
+        mergeEEG = true;
+    else
+    end
+    
+    if ~flipEEG && mergeEEG
+        msg = sprintf('\ERROR: nbad idea to merge w/o also flipping\n');
+        error(msg);
+    else
+    end 
     
     %% add paths
     close all;
@@ -25,11 +42,16 @@ function analyze_pphys(expNum,taskFig,logConvert)
     %% PRELIMINARY
     % folder names
     topPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
-    dataPath = sprintf('%s/pphys%0.0f_data',topPath,expNum);
+    if expNum == 1
+        dataPath = sprintf('%s/exp6_pphys1',topPath);
+    else
+        dataPath = sprintf('%s/exp7_pphys2',topPath);
+    end
     subPaths = subfolders(sprintf('%s/*20*',dataPath),1);
-    % NOTE! should be path corresponding to blank
-    rcaPath = sprintf('%s/figures/exp1',topPath);
-    savePath = sprintf('%s/figures/pphys%0.0f',topPath,expNum);
+    adultExp = [1,2,4,5,8];
+    % NOTE! should be path corresponding to blank (2);
+    rcaPath = sprintf('%s/figures/exp%0.0f/plottingData.mat',topPath,adultExp(2));
+    savePath = sprintf('%s/figures/paper_figures/figure4',topPath);
     % string for saving the data
     saveStr = datestr(clock,26);
     saveStr(strfind(saveStr,'/')) ='';
@@ -37,7 +59,7 @@ function analyze_pphys(expNum,taskFig,logConvert)
         mkdir(savePath);
     else
     end    
-    saveFileName = sprintf('%s/rcaData_%s.mat',savePath, saveStr); % include the date as a string;
+    saveFileName = sprintf('%s/rcaData_exp%0.0f_%s.mat',savePath,expNum,saveStr); % include the date as a string;
     
     % figure labels
     bothLabels = {'Hori2D','Hori3D','Vert2D','Vert3D'};
@@ -55,7 +77,7 @@ function analyze_pphys(expNum,taskFig,logConvert)
         % reordering for experiment 2
         falseOrder = {'HoriA2D','HoriA3D','VertA2D','VertA3D', ...
                         'catch','catch','catch','catch', ...
-                        'VertD3D','VertD2D','HoriD3D','HoriD2D', ...
+                        'HoriD2D','HoriD3D','VertD2D','VertD3D', ...
                         'catch','catch','catch','catch'};
         rcaLabels = {'Asc. abs-Mot','Desc. abs-Mot','Asc. abs-Disp','Desc. abs-Disp'};
         pphysLabels = {'abs-Mot','abs-Disp'};
@@ -179,12 +201,12 @@ function analyze_pphys(expNum,taskFig,logConvert)
     subPaths = subPaths(includeIdx);
     
     %% PLOT PPHYS
-    lWidth = 1.5;
+    lWidth = 2;
     fSize = 12;
     if logConvert
         baseVal = reallog(.1);
-        yMin = reallog(.1); yMax = reallog(10);
-        logOpts = {'ytick',reallog([.1,.25,.5,1,2,10]),'yticklabel',[.1,.25,.5,1,2,10]};
+        yMin = reallog(.1); yMax = reallog(5);
+        logOpts = {'ytick',reallog([.1,.25,.5,1,2,5]),'yticklabel',[.1,.25,.5,1,2,5]};
     else
         baseVal = 0;
         yMin = 0; yMax = 8;
@@ -200,9 +222,9 @@ function analyze_pphys(expNum,taskFig,logConvert)
     hold on
     for z = 1:8
         if isempty(strfind(condLabels{z},'3D'));
-            h2D = bar(z,stimGrand(z),'facecolor',color1(1,:),'edgecolor','none','basevalue',baseVal);
+            h2D = bar(z,stimGrand(z),'facecolor',color1(expNum,:),'edgecolor','none','basevalue',baseVal);
         else
-            h3D = bar(z,stimGrand(z),'facecolor',color2(1,:),'edgecolor','none','basevalue',baseVal);
+            h3D = bar(z,stimGrand(z),'facecolor',color2(expNum,:),'edgecolor','none','basevalue',baseVal);
         end
     end
     errorb(1:8,stimGrand,stimStderr);
@@ -221,26 +243,27 @@ function analyze_pphys(expNum,taskFig,logConvert)
     hold on
     for z = 1:4
         if isempty(strfind(bothLabels{z},'3D'));
-            h2D = bar(z,bothGrand(z),'facecolor',color1(1,:),'edgecolor','none','basevalue',baseVal);
+            h2D = bar(z,bothGrand(z),'facecolor',color1(expNum,:),'edgecolor','none','basevalue',baseVal);
         else
-            h3D = bar(z,bothGrand(z),'facecolor',color2(1,:),'edgecolor','none','basevalue',baseVal);
+            h3D = bar(z,bothGrand(z),'facecolor',color2(expNum,:),'edgecolor','none','basevalue',baseVal);
         end
     end
-    errorb(1:4,bothGrand,bothStderr);
+    errorb(1:4,bothGrand,bothStderr,'barwidth',.5,'linewidth',lWidth);
     xlim([.5,4.5]);
     ylim([yMin,yMax]);
     set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
-    legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
-    legend boxoff;
+    %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
+    %legend boxoff;
     hold off
     set(gcf, 'units', 'centimeters');
     figPos = get(gcf,'pos');
-    figPos(4) = 10;
-    figPos(3) = 20;
+    figPos(4) = 6;
+    figPos(3) = 18;
     set(gcf,'pos',figPos);
     ylabel('Displacement (arcmins)','fontsize',fSize,'fontname','Arial');
 
     export_fig(sprintf('%s/pphys%0.0f_beh.pdf',savePath,expNum),'-pdf','-transparent',pphysFig);
+    savefig(gcf,sprintf('%s/pphys%0.0f_beh.fig',savePath,expNum)); 
     %close(pphysFig);
 
     %% LOAD IN EEG DATA
@@ -273,7 +296,42 @@ function analyze_pphys(expNum,taskFig,logConvert)
             cellNoiseData1(:,s)=noise1;
             cellNoiseData2(:,s)=noise2;
         end
+        
+        for c = 1:(length(conditions)/2)
+            if flipEEG
+                % FLIP CONDITIONS 5-8
+                flipIdx = zeros(size(subBinIdx{s}{c}));
+                freqCount = 0;
+                for q = 1:length(subBinIdx{s}{c})
+                    flipIdx(q) = (10+1-subBinIdx{s}{c}(q))+(freqCount*10);
+                    if subBinIdx{s}{c}(q) == 10
+                        freqCount = freqCount+1;
+                    else
+                    end
+                end
+                flipIdx = [flipIdx;flipIdx+length(flipIdx)]; % add imag indices
+                sensorData{c+c,s} = sensorData{c+c,s}(flipIdx,:,:);
+                cellNoiseData1{c+c,s} = cellNoiseData1{c+c,s}(flipIdx,:,:);
+                cellNoiseData2{c+c,s} = cellNoiseData2{c+c,s}(flipIdx,:,:);
+            else
+            end
+            if mergeEEG
+                % ADD THEM TO 1-4
+                sensorData{c+c-1,s} = cat(3,sensorData{c+c-1,s},sensorData{c+c,s});
+                cellNoiseData1{c+c-1,s} = cat(3,cellNoiseData1{c+c-1,s},cellNoiseData1{c+c,s});
+                cellNoiseData2{c+c-1,s} = cat(3,cellNoiseData2{c+c-1,s},cellNoiseData2{c+c,s});
+            else
+            end
+        end
     end
+    if mergeEEG
+        sensorData = sensorData(1:2:length(conditions),:);
+        cellNoiseData1 = cellNoiseData1(1:2:length(conditions),:);
+        cellNoiseData2 = cellNoiseData2(1:2:length(conditions),:);
+        conditions = conditions(1:(length(conditions)/2));
+    else
+    end
+    
     %% CHECK FREQUENCY AND BIN INDICES FOR CONSISTENCY ACROSS SUBS
     nSubs = size(sensorData,3);
     for s=1:nSubs
@@ -284,81 +342,152 @@ function analyze_pphys(expNum,taskFig,logConvert)
         end
     end
 
-    rcaFiles = subfiles([rcaPath,'/rcaData*.mat'],1);
-    load(rcaFiles{end},'allRCA');
-
-    %% repopulate RCA struct with pphys data
+    %% PROJECT DATA ONTO RCs
+    % do this separately for each harmonic
+    load(rcaPath,'readyRCA');
     warning('off','all')
-    rcaData = rcaProject(sensorData,allRCA.W);
-    noiseData.lowerSideBand=rcaProject(cellNoiseData1,allRCA.W); 
-    noiseData.higherSideBand=rcaProject(cellNoiseData2,allRCA.W);
-
-    %% create a "component" of just one channel for performance evaluation if requested
-    chanToCompare = 75;
-    nChannels = size(sensorData{1},2);
-    wComparison=zeros(nChannels,1); wComparison(chanToCompare)=1; 
-    comparisonData=rcaProject(sensorData,wComparison); 
-    comparisonNoiseData.lowerSideBand =rcaProject(cellNoiseData1,wComparison); 
-    comparisonNoiseData.higherSideBand =rcaProject(cellNoiseData2,wComparison); 
-
-    %% generate final output struct
-    allRCA.data = rcaData;
-    allRCA.noiseData = noiseData;
-    allRCA.comparisonData = comparisonData;
-    allRCA.comparisonNoiseData = comparisonNoiseData;
-    allRCA.inputData = sensorData;
-    allRCA.settings.binLevels = subBinLabels{1};
-
-    %% rca replaces NaNs with zeroes, correct this
-    nanDims = [1,2]; % if all time points are zero, or all channels are zero
-    structVars = {'data','noiseData','comparisonData','comparisonNoiseData'};
-    noiseVars = {'lowerSideBand','higherSideBand'};
-    for z=1:length(structVars)
-        if strfind(lower(structVars{z}),'noise')
-            for n = 1:length(noiseVars)
-                allRCA.(structVars{z}).(noiseVars{n}) = cellfun(@(x) Zero2NaN(x,nanDims),allRCA.(structVars{z}).(noiseVars{n}),'uni',false);
-            end
-        else   
-            allRCA.(structVars{z}) = cellfun(@(x) Zero2NaN(x,nanDims),allRCA.(structVars{z}),'uni',false);
+    doNR = false(1,5,8); % 1 freqs, 5 RCs, 8 conditions
+    doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
+    keepConditions = true;
+    errorType = 'SEM';
+    trialError = false;
+    for f = 1:4
+        if strcmp(rcaType,'all'); 
+            useFreq = f + 8;
+        else
+            useFreq = f;
         end
+
+        % repopulate RCA struct with pphys data
+        rcaData = rcaProject(sensorData,readyRCA(useFreq).W);
+        noiseData.lowerSideBand=rcaProject(cellNoiseData1,readyRCA(useFreq).W); 
+        noiseData.higherSideBand=rcaProject(cellNoiseData2,readyRCA(useFreq).W);
+
+        % create a "component" of just one channel for performance evaluation if requested
+        chanToCompare = 75;
+        nChannels = size(sensorData{1},2);
+        wComparison=zeros(nChannels,1); wComparison(chanToCompare)=1; 
+        comparisonData=rcaProject(sensorData,wComparison); 
+        comparisonNoiseData.lowerSideBand =rcaProject(cellNoiseData1,wComparison); 
+        comparisonNoiseData.higherSideBand =rcaProject(cellNoiseData2,wComparison); 
+
+        % generate final output struct
+        pphysRCA(f).data = rcaData;
+        pphysRCA(f).noiseData = noiseData;
+        pphysRCA(f).comparisonData = comparisonData;
+        pphysRCA(f).comparisonNoiseData = comparisonNoiseData;
+        pphysRCA(f).inputData = sensorData;
+        
+        pphysRCA(f).settings.binLevels = subBinLabels{3};
+        pphysRCA(f).settings.freqLabels = subFreqLabels{3};
+        pphysRCA(f).settings.freqIndices = subFreqIdx{3};
+        pphysRCA(f).settings.binIndices = subBinIdx{3};
+        pphysRCA(f).settings.freqsToUse = f;
+        pphysRCA(f).settings.binsToUse = 1:length(subBinLabels{3}{1});
+        pphysRCA(f).settings.condsToUse = 1:length(conditions);
+        pphysRCA(f).A = readyRCA(useFreq).A;
+    
+        % rca replaces NaNs with zeroes, correct this
+        nanDims = [1,2]; % if all time points are zero, or all channels are zero
+        structVars = {'data','noiseData','comparisonData','comparisonNoiseData'};
+        noiseVars = {'lowerSideBand','higherSideBand'};
+        for z=1:length(structVars)
+            if strfind(lower(structVars{z}),'noise')
+                for n = 1:length(noiseVars)
+                    pphysRCA(f).(structVars{z}).(noiseVars{n}) = cellfun(@(x) Zero2NaN(x,nanDims),pphysRCA(f).(structVars{z}).(noiseVars{n}),'uni',false);
+                end
+            else   
+                pphysRCA(f).(structVars{z}) = cellfun(@(x) Zero2NaN(x,nanDims),pphysRCA(f).(structVars{z}),'uni',false);
+            end
+        end
+
+        % COMPUTE VALUES FOR PLOTTING
+        % AE RCA
+%         keepConditions = true;
+%         errorType = 'SEM';
+%         trialError = false;
+%         tempDataStrct = aggregateData(pphysRCA(f).data,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         ampVals(:,f,1:5,:) = tempDataStrct.ampBins;
+%         errLB(:,f,1:5,:)   = tempDataStrct.ampErrBins(:,:,:,:,1);
+%         errUB(:,f,1:5,:)   = tempDataStrct.ampErrBins(:,:,:,:,2);
+%         tempNoiseStrct1 = aggregateData(pphysRCA(f).noiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         tempNoiseStrct2 = aggregateData(pphysRCA(f).noiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         [snrVals(:,f,1:5,:),noiseVals(:,f,1:5,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
+% 
+%         % COMPARISON
+%         tempDataStrct = aggregateData(pphysRCA(f).comparisonData,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         ampVals(:,f,6,:) = tempDataStrct.ampBins;
+%         errLB(:,f,6,:) = tempDataStrct.ampErrBins(:,:,:,:,1);
+%         errUB(:,f,6,:) = tempDataStrct.ampErrBins(:,:,:,:,2);
+%         tempNoiseStrct1 = aggregateData(pphysRCA(f).comparisonNoiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         tempNoiseStrct2 = aggregateData(pphysRCA(f).comparisonNoiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
+%         [snrVals(:,f,6,:),noiseVals(:,f,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
+
+        rcStruct = aggregateData(pphysRCA(f).data,pphysRCA(f).settings,keepConditions,errorType,trialError,doNR);
+        compStruct = aggregateData(pphysRCA(f).comparisonData,pphysRCA(f).settings,keepConditions,errorType,trialError);
+        % note: no NR fitting on noise data
+        rcNoiseStrct1 = aggregateData(pphysRCA(f).noiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
+        rcNoiseStrct2 = aggregateData(pphysRCA(f).noiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
+        compNoiseStrct1 = aggregateData(pphysRCA(f).comparisonNoiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
+        compNoiseStrct2 = aggregateData(pphysRCA(f).comparisonNoiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
+        % snr
+        [rcSNR,rcNoiseVals] = computeSnr(rcStruct,rcNoiseStrct1,rcNoiseStrct2,false);
+        [compSNR,compNoiseVals] = computeSnr(compStruct,compNoiseStrct1,compNoiseStrct2,false);
+
+        % RC
+        pphysRCA(f).stats.ampVals(:,1:5,:) = rcStruct.ampBins;
+        pphysRCA(f).stats.errLB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,1);
+        pphysRCA(f).stats.errUB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,2);
+        pphysRCA(f).stats.snrVals(:,1:5,:) = rcSNR;
+        pphysRCA(f).stats.noiseVals(:,1:5,:) = rcNoiseVals;
+        pphysRCA(f).stats.NR_pOpt(:,1:5,:) = rcStruct.NakaRushton.pOpt;
+        pphysRCA(f).stats.NR_JKSE(:,1:5,:) = rcStruct.NakaRushton.JKSE;
+        pphysRCA(f).stats.NR_R2(1:5,:) = rcStruct.NakaRushton.R2;
+        pphysRCA(f).stats.hModel = rcStruct.NakaRushton.hModel;
+        pphysRCA(f).stats.tSqrdP(:,1:5,:) = rcStruct.tSqrdP;
+        pphysRCA(f).stats.tSqrdSig(:,1:5,:) = rcStruct.tSqrdSig;
+        pphysRCA(f).stats.tSqrdVal(:,1:5,:) = rcStruct.tSqrdVal;
+
+        % COMPARISON
+        pphysRCA(f).stats.ampVals(:,6,:) = compStruct.ampBins;
+        pphysRCA(f).stats.errLB(:,6,:) = compStruct.ampErrBins(:,:,:,:,1);
+        pphysRCA(f).stats.errUB(:,6,:) = compStruct.ampErrBins(:,:,:,:,2);
+        pphysRCA(f).stats.snrVals(:,6,:) = compSNR;
+        pphysRCA(f).stats.noiseVals(:,6,:) = compNoiseVals;
+        pphysRCA(f).stats.NR_pOpt(:,6,:) = compStruct.NakaRushton.pOpt;
+        pphysRCA(f).stats.NR_JKSE(:,6,:) = compStruct.NakaRushton.JKSE;
+        pphysRCA(f).stats.NR_R2(6,:) = compStruct.NakaRushton.R2;
+        pphysRCA(f).stats.tSqrdP(:,6,:) = compStruct.tSqrdP;
+        pphysRCA(f).stats.tSqrdSig(:,6,:) = compStruct.tSqrdSig;
+        pphysRCA(f).stats.tSqrdVal(:,6,:) = compStruct.tSqrdVal;
     end
     warning('on','all')
 
-    %% COMPUTE VALUES FOR PLOTTING
-    % AE RCA
-    keepConditions = true;
-    errorType = 'SEM';
-    trialError = true;
-    tempDataStrct = aggregateData(allRCA.data,allRCA.settings,keepConditions,errorType,trialError);
-    ampVals(:,:,1:5,:) = tempDataStrct.ampBins;
-    errLB(:,:,1:5,:)   =tempDataStrct.ampBins-tempDataStrct.ampErrBins(:,:,:,:,1);
-    errUB(:,:,1:5,:)   =tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
-    tempNoiseStrct1 = aggregateData(allRCA.noiseData.lowerSideBand,allRCA.settings,keepConditions,errorType,trialError);
-    tempNoiseStrct2 = aggregateData(allRCA.noiseData.higherSideBand,allRCA.settings,keepConditions,errorType,trialError);
-    [snrVals(:,:,1:5,:),noiseVals(:,:,1:5,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-
-    % COMPARISON
-    tempDataStrct = aggregateData(allRCA.comparisonData,allRCA.settings,keepConditions,errorType,trialError);
-    ampVals(:,:,6,:) = tempDataStrct.ampBins;
-    errLB(:,:,6,:)=tempDataStrct.ampBins-tempDataStrct.ampErrBins(:,:,:,:,1);
-    errUB(:,:,6,:)=tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
-    tempNoiseStrct1 = aggregateData(allRCA.comparisonNoiseData.lowerSideBand,allRCA.settings,keepConditions,errorType,trialError);
-    tempNoiseStrct2 = aggregateData(allRCA.comparisonNoiseData.higherSideBand,allRCA.settings,keepConditions,errorType,trialError);
-    [snrVals(:,:,6,:),noiseVals(:,:,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-
     %% PLOT RCs
     close all;
-
-    condsToUse = [1,1,3,3,1,1,3,3]; % you are plotting 2D rel and 3D rel x 2
-    rcaType = 'all'; % full or freq?
-    plotSNR = false;
-
+    if mergeEEG
+         pphysConds{1} = 1:2;
+         pphysConds{2} = 3:4;
+         if expNum == 1
+            pphysColors = [1,3,1,3];
+         else
+            pphysColors = [2,4,2,4];
+         end
+    else
+        pphysConds{1} = 1:4;
+        pphysConds{2} = 5:8; % you are plotting 2D rel and 3D rel x 2
+        if expNum == 1
+            pphysColors = [1,1,3,3,1,1,3,3];
+        else
+            pphysColors = [2,2,4,4,2,2,4,4];
+         end
+    end
     % plot settings
     % set figure size in the beginning
     figHeight = 30;
     figWidth = 20;
 
-    binVals = cellfun(@(x) str2num(x), allRCA.settings.binLevels{1});
+    binVals = cellfun(@(x) str2num(x), pphysRCA(1).settings.binLevels{1});
 
     lWidth = 1.5;
     %red =   [152 53 49; 231 184 182]./255;
@@ -368,71 +497,82 @@ function analyze_pphys(expNum,taskFig,logConvert)
     color1 = [cBrewer.rgb20(3,:); cBrewer.rgb20(4,:)];
     color2 = [cBrewer.rgb20(5,:); cBrewer.rgb20(6,:)];
     subColors = repmat([color1; color2],2,1);
-    subColors = subColors(condsToUse,:);
+    subColors = subColors(pphysColors,:);
     fSize = 12;
-    gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Arial','linewidth',lWidth};
+    gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
     for f=1:length(freqsToUse)
-        figure;
+        freqFig(f) = figure;
         curFreq = freqsToUse(f);
+                        
+        valSet = pphysRCA(curFreq).stats.ampVals;
+        errSet1 = pphysRCA(curFreq).stats.errLB;
+        errSet2 = pphysRCA(curFreq).stats.errUB;
+        NRset = pphysRCA(curFreq).stats.NR_pOpt;
+        NRmodel = pphysRCA(curFreq).stats.hModel;
         for r = 1:(nComp+1)
             if r<6
                 egiH(r) = subplot(nComp+1,3,3+(r-1)*3);
                 hold on
-                rcaColorBar = [min(allRCA.A(:,r)),max(allRCA.A(:,r))];
+                rcaColorBar = [min(pphysRCA(curFreq).A(:,r)),max(pphysRCA(curFreq).A(:,r))];
                 newExtreme = max(abs(rcaColorBar));
                 rcaColorBar = [-newExtreme,newExtreme];
-                mrC.plotOnEgi(allRCA.A(:,r),rcaColorBar);
+                mrC.plotOnEgi(pphysRCA(curFreq).A(:,r)*-1,rcaColorBar);
                 hold off
             else
             end
             for s=1:2 % vertical or horizontal motion
                 if s==1
-                    subplot(nComp+1,3,1+(r-1)*3);
-                    curConds = find(ismember(allRCA.settings.condsToUse,1:4));
-                    titleStr = sprintf('horizontal: %s',allRCA.settings.freqLabels{1}{curFreq});
+                    spH = subplot(nComp+1,3,1+(r-1)*3);
+                    curConds = find(ismember(pphysRCA(curFreq).settings.condsToUse,pphysConds{s}));
+                    titleStr = sprintf('horizontal: %s',pphysRCA(curFreq).settings.freqLabels{1}{curFreq});
                 else
-                    subplot(nComp+1,3,2+(r-1)*3);
-                    curConds = find(ismember(allRCA.settings.condsToUse,5:8));
-                    titleStr = sprintf('vertical: %s',allRCA.settings.freqLabels{1}{curFreq});
+                    spH = subplot(nComp+1,3,2+(r-1)*3);
+                    curConds = find(ismember(pphysRCA(curFreq).settings.condsToUse,pphysConds{s}));
+                    titleStr = sprintf('vertical: %s',pphysRCA(curFreq).settings.freqLabels{1}{curFreq});
                 end
                 hold on
                 for c=1:length(curConds)
-                    if isempty(strfind(condLabels{curConds(c)},'A'))
-                        % descending, download triangle
-                        ampMarkerStyle = {'-v','LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1 1 1],'MarkerSize',7}; % 'MarkerEdgeColor','none'
+                    if mergeEEG
+                        ampMarkerStyle = {'o','LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1 1 1],'MarkerSize',5}; % 'MarkerEdgeColor','none'
                     else
-                        % ascending, upward triangle
-                        ampMarkerStyle = {'-^','LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1 1 1],'MarkerSize',7};
+                        if isempty(strfind(condLabels{curConds(c)},'A'))
+                            % descending, download triangle
+                            ampMarkerStyle = {'^','LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1 1 1],'MarkerSize',7}; % 'MarkerEdgeColor','none'
+                        else
+                            % ascending, upward triangle
+                            ampMarkerStyle = {'v','LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1 1 1],'MarkerSize',7};
+                        end
                     end
-                    if plotSNR
-                        valSet = snrVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,snrVals(:,curFreq,r,curConds(c)),ampMarkerStyle{:});
-                        plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
+                    
+                    valH(c)=plot(binVals,valSet(:,r,curConds(c)),ampMarkerStyle{:});
+                    hE = ErrorBars(binVals,valSet(:,r,curConds(c)),[errSet1(:,r,curConds(c)),errSet2(:,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth);
+                    uistack(valH(c),'bottom')
+                    cellfun(@(x) uistack(x,'bottom'), hE);
+                    hold on
+                    if ~isnan(NRset(1,r,curConds(c)))
+                        % plot Naka-Rushton
+                        nFine = 1e2;
+                        nrX = linspace( min(binVals), max(binVals), nFine )';
+                        nrVals = NRmodel( nrX, NRset(:,r,curConds(c)));
+                        hNR{c} = plot( nrX, nrVals, '-k', 'LineWidth',lWidth);
                     else
-                        valSet = ampVals(:,curFreq,r,:);
-                        ampH(c)=plot(binVals,ampVals(:,curFreq,r,curConds(c)),ampMarkerStyle{:});
-                        %plot(binVals,noiseVals(:,curFreq,r,curConds(c)),'sq','Color',subColors(curConds(c),:),'MarkerSize',5);
-                        %eH = errorbar(binVals,ampVals(:,curFreq,r,curConds(c)),errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c)),'Color',subColors(curConds(c),:),'LineWidth',lWidth);
-                        hE = ErrorBars(binVals,ampVals(:,curFreq,r,curConds(c)),[errLB(:,curFreq,r,curConds(c)),errUB(:,curFreq,r,curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false);
-                        cellfun(@(x) uistack(x,'bottom'), hE);
-                        hold on
                     end
                 end
+                cellfun(@(x) uistack(x,'bottom'), hNR);
+
                 if f == 2 && r == 1     
-                    yUnit = 0.4;
-                    yMax = 2.0;
+                    yUnit = 0.5;
+                    yMax = 3.5;
                 else
                     yUnit = 0.2;
                     yMax = 1.2;
                 end
-            	if expNum == 1
+                if expNum == 1
                     xMin = .13;
                     xMax = 3;
                 else
                     xMin = .4;
                     xMax = 18;
-                    yMax = yMax * 2;
-                    yUnit = yUnit * 2;
                 end
                    
                 %yUnit = floor((ceil(max(valSet(:)))/5)*10)/10;
@@ -443,9 +583,9 @@ function analyze_pphys(expNum,taskFig,logConvert)
                 ylim([0,yMax])
 
                 % plot noise patch
-                meanNoise = max(noiseVals(:,curFreq,r,curConds),[],4)';
+                meanNoise = max(pphysRCA(curFreq).stats.noiseVals(:,r,curConds),[],3)';
                 yNoiseVals = [0,meanNoise(1),meanNoise,meanNoise(end),0]; % start and end points just repeats of first and last
-                xNoiseVals = [min(get(gca,'xlim')), min(get(gca,'xlim')),binVals',max(get(gca,'xlim')),max(get(gca,'xlim'))];
+                xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
                 pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
                 uistack(pH,'bottom')
 
@@ -464,14 +604,34 @@ function analyze_pphys(expNum,taskFig,logConvert)
                         ylabel('Amplitude (\muV)')
                         xlabel('Distance (arcmins)');
                     else
-                        lH = legend(ampH,rcaLabels,'location','northeast');
+                        if mergeEEG
+                            lH = legend(valH,pphysLabels,'location','northeast');
+                        else
+                            lH = legend(valH,rcaLabels,'location','northeast');
+                        end
                         legend boxoff
                         lPos = get(lH,'position');
                         lPos(1) = lPos(1) + .23;
                         lPos(2) = lPos(2) + .05;
                         set(lH,'position',lPos);
-                        tH = text(3.5,-0.1,sprintf('n = %0d',size(allRCA.data,2)),'fontsize',fSize,'fontname','Arial');
+                        tH = text(3.5,-0.1,sprintf('n = %0d',size(pphysRCA(f).data,2)),'fontsize',fSize,'fontname','Arial');
                     end
+                end
+                if f == 2 && r == 1
+                    tmpFig = figure;
+                    tmpAx = get(spH,'children');
+                    copyobj(allchild(spH),gca(tmpFig));
+                    set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
+                    xlim([xMin,xMax]);
+                    ylim([0,yMax])
+                    if s == 2
+                        savefig(sprintf('%s/subplot%0.0f_vert.fig',savePath,expNum));
+                    else
+                        savefig(sprintf('%s/subplot%0.0f_hori.fig',savePath,expNum));
+                    end
+                    close(tmpFig);
+                    figure(freqFig(f));
+                else
                 end
                 hold off;
             end
@@ -492,11 +652,7 @@ function analyze_pphys(expNum,taskFig,logConvert)
         figPos(4) = figHeight;
         figPos(3) = figWidth;
         set(gcf,'pos',figPos);
-        if plotSNR        
-            export_fig(sprintf('%s/pphys%0.0f_rc%d_%s_snr.pdf',savePath,expNum,f,rcaType),'-pdf','-transparent',gcf);
-        else
-            export_fig(sprintf('%s/pphys%0.0f_rc%d_%s.pdf',savePath,expNum,f,rcaType),'-pdf','-transparent',gcf);
-        end
+        export_fig(sprintf('%s/pphys%0.0f_rc%d_%s.pdf',savePath,expNum,f,rcaType),'-pdf','-transparent',gcf);
     end
     close all;
 
@@ -530,4 +686,108 @@ if taskFig
     end
 else
 end
+
+%% PLOT COMBINED FIGURE
+close all;
+% experiment 1, horizontal
+rcaH(1) = openfig(sprintf('%s/subplot%0.0f_hori.fig',savePath,1)); 
+rcaAx(1) = gca;
+% experiment 1, vertical
+rcaH(2) = openfig(sprintf('%s/subplot%0.0f_vert.fig',savePath,1)); 
+rcaAx(2) = gca;
+% experiment 2, horizontal
+rcaH(3) = openfig(sprintf('%s/subplot%0.0f_hori.fig',savePath,2)); 
+rcaAx(3) = gca;
+% experiment 2, vertical
+rcaH(4) = openfig(sprintf('%s/subplot%0.0f_vert.fig',savePath,2)); 
+rcaAx(4) = gca;
+
+behH(1) = openfig(sprintf('%s/pphys%0.0f_beh.fig',savePath,1)); 
+behAx(1) = gca;
+behH(2) = openfig(sprintf('%s/pphys%0.0f_beh.fig',savePath,2)); 
+behAx(2) = gca;
+
+figure; %create new figure
+for z = 1:4
+    spH = subplot(2,3,z+(z>2)); %create and get handle to the subplot axes
+    figH = get(rcaAx(z),'children'); %get handle to all the children in the figure
+    copyobj(figH,spH); %copy children to new parent axes i.e. the subplot axes
+    delete(findall(spH,'type','text'));
+    if z < 3
+        xMin = .13;
+        xMax = 3;
+        textPos = 0.07;
+    else
+        xMin = .4;
+        xMax = 18;
+        textPos = 0.17;
+    end
+    yUnit = 0.5;
+    yMax = 3.5;
+    gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
+    set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
+    xlim([xMin,xMax]);
+    ylim([0,yMax])
+    switch z
+        case 1
+            plotLabel = 'A';
+            title('Horizontal','fontsize',fSize,'fontname','Helvetica')
+            text(.15,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.1,'Reference','fontsize',fSize,'fontname','Helvetica')
+        case 2
+            plotLabel = 'B';
+            title('Vertical','fontsize',fSize,'fontname','Helvetica')
+            text(.15,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.1,'Reference','fontsize',fSize,'fontname','Helvetica')
+        case 3
+            plotLabel = 'D';
+            title('Horizontal','fontsize',fSize,'fontname','Helvetica')
+            ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
+            xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
+            text(.5,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.1,'No reference','fontsize',fSize,'fontname','Helvetica')
+        case 4
+            title('Vertical','fontsize',fSize,'fontname','Helvetica')
+            plotLabel = 'E';
+            text(.5,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.1,'No reference','fontsize',fSize,'fontname','Helvetica')
+        otherwise
+    end
+    text(textPos,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
+        plotLabel,'fontsize',fSize*2,'fontname','Helvetica');
+    if z == 4
+        for q = 1:2
+            spH = subplot(2,3,3+(q-1)*3); %create and get handle to the subplot axes
+            figH = get(behAx(q),'children'); %get handle to all the children in the figure
+            copyobj(figH,spH); %copy children to new parent axes i.e. the subplot axes
+            delete(findall(spH,'type','text'));
+            if logConvert
+                baseVal = reallog(.1);
+                yMin = reallog(.1); yMax = reallog(5);
+                logOpts = {'ytick',reallog([.1,.25,.5,1,2,5]),'yticklabel',[.1,.25,.5,1,2,5]};
+            else
+                baseVal = 0;
+                yMin = 0; yMax = 8;
+                logOpts ={'ytick',yMin:1:yMax};
+            end
+            ylabel('threshold (arcmins)','fontsize',fSize,'fontname','Helvetica')
+            xlim([.5,4.5]);
+            ylim([yMin,yMax]);
+            set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+             if q == 1
+                title('Reference','fontsize',fSize,'fontname','Helvetica');
+                text(-.25,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
+                    'C','fontsize',fSize*2,'fontname','Helvetica');
+            else
+                title('No reference','fontsize',fSize,'fontname','Helvetica');
+                text(-.25,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
+                    'F','fontsize',fSize*2,'fontname','Helvetica');
+             end
+        end
+    else
+    end  
+end
+set(gcf, 'units', 'centimeters');
+figPos = get(gcf,'pos');
+figPos(4) = 12;
+figPos(3) = 24;
+set(gcf,'pos',figPos);
+export_fig(sprintf('%s/figure4_complete.pdf',savePath),'-pdf','-transparent',gcf);
+
 
