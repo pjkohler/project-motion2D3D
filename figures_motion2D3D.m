@@ -15,7 +15,7 @@ figHeight = 25;
 figWidth = 17.8;
 condsToUse = 1:8;
 % figure params
-lWidth = 2;
+lWidth = 1.5;
 fSize = 12;
 cBrewer = load('colorBrewer.mat');
 color1 = [cBrewer.rgb20(3,:); cBrewer.rgb20(4,:)];
@@ -73,6 +73,10 @@ for e = 1:numExp
         egiH(e,f) = subplot(numExp,3,3+(e-1)*3);
         hold on
         if e == 1
+            if f == 1
+                clear rcaColorBar;
+            else
+            end
             rcaColorBar(:,f) = [min(readyRCA(curFreq).A(:,rcNum)),max(readyRCA(curFreq).A(:,rcNum))];
             newExtreme = round(max(abs(rcaColorBar(:,f)))*10)./10;
             rcaColorBar(:,f) = [-newExtreme,newExtreme*1.001];

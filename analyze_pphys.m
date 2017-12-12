@@ -601,8 +601,8 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                     title(titleStr,'fontsize',fSize,'fontname','Arial');
                 elseif r==6
                     if s==1
-                        ylabel('Amplitude (\muV)')
-                        xlabel('Distance (arcmins)');
+                        ylabel('amplitude (\muV)')
+                        xlabel('displacement (arcmins)');
                     else
                         if mergeEEG
                             lH = legend(valH,pphysLabels,'location','northeast');
