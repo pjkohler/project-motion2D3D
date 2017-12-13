@@ -191,15 +191,38 @@ for f=1:length(freqsToUse)
         hNR{c} = plot( nrX, nrVals, '-','color',mainColors(c,:), 'LineWidth',lWidth);
     end
     cellfun(@(x) uistack(x,'bottom'), hNR);
+    
+    % make new p-values
+    [rcaDataReal,rcaDataImag] = getRealImag(superRCA(f).data);
+    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataReal,'uni',false);
+    rcaDataReal = cell2mat(permute(rcaDataReal,[3,2,1]));
+    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataImag,'uni',false);
+    rcaDataImag = cell2mat(permute(rcaDataImag,[3,2,1]));
+            
+    for b = 1:length(binVals)
+        xyData = permute(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),[2,1,3]);
+        tempStrct = tSquaredFourierCoefs(xyData);
+        rc_tSqrdP(f,b) = tempStrct.pVal;
+        rc_tSqrdVal(f,b) = tempStrct.tSqrd;
+        rc_tSqrdSig(f,b) = tempStrct.H;
+        
+        diffComplex = diff(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),1,3)';
+        diffMag(f,b) = sqrt(nanmean(diffComplex(:,1)).^2+nanmean(diffComplex(:,2)).^2);
+    end
+    
+    
 
     if f == 1     
+        
         yUnit = 1;
+        yMin = 0;
         yMax = 5;
         legend(valH,{'horizontal','vertical'},'fontsize',fSize,'fontname','Helvetica','location','northwest');
         legend boxoff
         title('Second Harmonic','fontsize',fSize,'fontname','Helvetica')
     else
         yUnit = 0.5;
+        yMin = 0;
         yMax = 1.5;
         ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
         xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
@@ -212,12 +235,12 @@ for f=1:length(freqsToUse)
     set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
           
     xlim([xMin,xMax]);
-    ylim([0,yMax])
+    ylim([yMin,yMax])
     text(0.15,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
         plotLabel(f),'fontsize',fSize*2,'fontname','Helvetica');
     text(30,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
         plotLabel(f+2),'fontsize',fSize*2,'fontname','Helvetica');
-
+b
     % plot noise patch
     yNoiseVals = [0,maxNoise(1),maxNoise,maxNoise(end),0]; % start and end points just repeats of first and last
     xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
