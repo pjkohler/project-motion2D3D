@@ -1,6 +1,6 @@
 function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     if nargin < 1
-        expNum = 1;
+        expNum = 2;
     else
     end
     if nargin < 2
@@ -559,8 +559,8 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                     end
                 end
                 cellfun(@(x) uistack(x,'bottom'), hNR);
-
-                if f == 2 && r == 1     
+                
+                if curFreq == 2 && r == 1     
                     yUnit = 0.5;
                     yMax = 3.5;
                 else
@@ -601,8 +601,8 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                     title(titleStr,'fontsize',fSize,'fontname','Arial');
                 elseif r==6
                     if s==1
-                        ylabel('Amplitude (\muV)')
-                        xlabel('Distance (arcmins)');
+                        ylabel('amplitude (\muV)')
+                        xlabel('displacement (arcmins)');
                     else
                         if mergeEEG
                             lH = legend(valH,pphysLabels,'location','northeast');
@@ -614,10 +614,10 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                         lPos(1) = lPos(1) + .23;
                         lPos(2) = lPos(2) + .05;
                         set(lH,'position',lPos);
-                        tH = text(3.5,-0.1,sprintf('n = %0d',size(pphysRCA(f).data,2)),'fontsize',fSize,'fontname','Arial');
+                        tH = text(3.5,-0.1,sprintf('n = %0d',size(pphysRCA(curFreq).data,2)),'fontsize',fSize,'fontname','Arial');
                     end
                 end
-                if f == 2 && r == 1
+                if curFreq == 2 && r == 1
                     tmpFig = figure;
                     tmpAx = get(spH,'children');
                     copyobj(allchild(spH),gca(tmpFig));
@@ -630,7 +630,22 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                         savefig(sprintf('%s/subplot%0.0f_hori.fig',savePath,expNum));
                     end
                     close(tmpFig);
-                    figure(freqFig(f));
+                    figure(freqFig(curFreq));
+                    
+                    % make new p-values
+                    [rcaDataReal,rcaDataImag] = getRealImag(pphysRCA(curFreq).data(curConds,:));
+                    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataReal,'uni',false);
+                    rcaDataReal = cell2mat(permute(rcaDataReal,[3,2,1]));
+                    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataImag,'uni',false);
+                    rcaDataImag = cell2mat(permute(rcaDataImag,[3,2,1]));
+
+                    for b = 1:length(binVals)
+                        xyData = permute(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),[2,1,3]);
+                        tempStrct = tSquaredFourierCoefs(xyData);
+                        rc_tSqrdP(b,s) = tempStrct.pVal;
+                        rc_tSqrdVal(b,s) = tempStrct.tSqrd;
+                        rc_tSqrdSig(b,s) = tempStrct.H;
+                    end
                 else
                 end
                 hold off;
@@ -652,7 +667,7 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
         figPos(4) = figHeight;
         figPos(3) = figWidth;
         set(gcf,'pos',figPos);
-        export_fig(sprintf('%s/pphys%0.0f_rc%d_%s.pdf',savePath,expNum,f,rcaType),'-pdf','-transparent',gcf);
+        export_fig(sprintf('%s/pphys%0.0f_rc%d_%s.pdf',savePath,expNum,curFreq,rcaType),'-pdf','-transparent',gcf);
     end
     close all;
 
