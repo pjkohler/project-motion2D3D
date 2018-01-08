@@ -10,7 +10,7 @@ setenv('DYLD_LIBRARY_PATH','')
 clear all; close all;
 
 %% Set up inputs 
-
+plotSupplemental = true;
 trialError = false;
 
 % we now hardcode the paths to the two data sets
@@ -19,7 +19,13 @@ dateStr(strfind(dateStr,'/')) ='';
 
 % make subject list
 topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/';
-expList = {'exp1','exp2','exp4','exp8'};
+if plotSupplemental
+    expList = {'exp1','exp2','exp4','exp8'};
+    condsToUse = [3,7];
+else
+    expList = {'exp4','exp5'};
+    condsToUse = [4,8];
+end
 idList = [];
 for e = 1:length(expList);
     expFolder = subfolders(sprintf('%s/*%s*',topFolder,expList{e}),1);
@@ -56,7 +62,6 @@ saveFilePath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/paper
 
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
 freqsToUse= [2,4]; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
-condsToUse = [3,7];
 trialsToUse = []; %1:10; % subset of trials to use for analysis (if set to false or empty, all trials will be used)
 nReg=7; % RCA regularization constant (7-9 are typical values, but see within-trial eigenvalue plot in rca output)
 nComp=5; % number of RCs that you want to look at (3-5 are good values, but see across-trial eigenvalue plot in rca output)
@@ -153,6 +158,11 @@ rcaColorBar = [min(topoVals),max(topoVals)];
 newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
 rcaColorBar = [-newExtreme,newExtreme*1.001];
 plotLabel = {'A','B','C','D'};
+if plotSupplemental
+    flipIdx = [-1,1];
+else
+    flipIdx = [-1,1];
+end
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLevels{1});
     valSet = squeeze(superRCA(f).stats.ampVals(:,1,:));
@@ -165,9 +175,9 @@ for f=1:length(freqsToUse)
     egiH(f) = subplot(2,2,2+(f-1)*2);
     hold on
     if f == 1
-        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1)*-1,rcaColorBar,true);
+        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1)*flipIdx(f),rcaColorBar,true);
     else
-        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1),rcaColorBar,true);
+        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1)*flipIdx(f),rcaColorBar,true);
     end
     hold off
     figH(f+2) = subplot(2,2,f+(f-1));
@@ -240,7 +250,7 @@ for f=1:length(freqsToUse)
         plotLabel(f),'fontsize',fSize*2,'fontname','Helvetica');
     text(30,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
         plotLabel(f+2),'fontsize',fSize*2,'fontname','Helvetica');
-b
+
     % plot noise patch
     yNoiseVals = [0,maxNoise(1),maxNoise,maxNoise(end),0]; % start and end points just repeats of first and last
     xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
@@ -284,4 +294,8 @@ figPos = get(gcf,'pos');
 figPos(4) = figPos(4)/figPos(3)*17.8;
 figPos(3) = 17.8;
 set(gcf,'pos',figPos);
-export_fig(sprintf('%s/figure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+if plotSupplemental
+    export_fig(sprintf('%s/supplfigure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+else
+    export_fig(sprintf('%s/figure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+end
