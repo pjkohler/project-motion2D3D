@@ -1,27 +1,27 @@
 %% Add Paths
 close all;
-% codeFolder = '/Users/kohler/code';
-% rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
+ codeFolder = '/Users/kohler/code';
+ rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
+ addpath(genpath(rcaCodePath));
+ addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
+ addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
+ setenv('DYLD_LIBRARY_PATH','')
+
+% codeFolder = '/Users/labmanager/Desktop/LabManager/MatAnal';
+% rcaCodePath = sprintf('%s/rcaBase',codeFolder);
+% addpath(genpath(codeFolder));
 % addpath(genpath(rcaCodePath));
-% addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
+% addpath(genpath(sprintf('%s/mrC',codeFolder)));
+% addpath(genpath(sprintf('%s/matlab_lib',codeFolder)));
 % addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
+% addpath(genpath(sprintf('%s/export_fig',codeFolder)));
 % setenv('DYLD_LIBRARY_PATH','')
 
-%     codeFolder = '/Users/labmanager/Desktop/LabManager/MatAnal';
-%     rcaCodePath = sprintf('%s/rcaBase',codeFolder);
-%     addpath(genpath(codeFolder));
-%     addpath(genpath(rcaCodePath));
-%     addpath(genpath(sprintf('%s/mrC',codeFolder)));
-%     addpath(genpath(sprintf('%s/matlab_lib',codeFolder)));
-%     addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
-%     addpath(genpath(sprintf('%s/export_fig',codeFolder)));
-%     setenv('DYLD_LIBRARY_PATH','')
-
-%mainPath = '/Users/labmanager/Desktop/LabManager/WM_Data/2017_2DBaby/';
+%mainPath = '/Users/labmanager/Desktop/LabManager/WM_Data/2017_2DBaby';
 mainPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
 figureFolder = sprintf('%s/figures/exp3',mainPath);
 
-load(sprintf('%s/BabyDataOutput_1F1',figureFolder)); %file name from prep workspace export
+load(sprintf('%s/BabyDataOutput_2F1',figureFolder)); %file name from prep workspace export
 %% PLOT RCs
 close all;
 nFreq = length(allRCA.settings.freqsToUse);
@@ -38,13 +38,13 @@ color2 = [cBrewer.rgb20(5,:); cBrewer.rgb20(6,:)];
 subColors = repmat([color1; color2],2,1);
 subColors = subColors(condsToUse,:);
 fSize = 12;
-gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','color','none','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
+gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
 condLabels = repmat({'rel-Mot','abs-Mot','rel-Disp','abs-Disp'},1,2);
 condLabels = condLabels(condsToUse);
-xMin = 1; xMax = 40;
+xMin = 1.8; xMax = 33.5;
 
 if freqsToUse == 2
-    nComp = 1;   %change to reflect desired plotting of only 1st RC. 
+    nComp = 1;   %change to reflect desired plotting of only 1st RC.
 end
 
 for f= 1:length(freqsToUse)
@@ -71,7 +71,7 @@ for f= 1:length(freqsToUse)
         xlabel(cH(f),'weights','fontsize',fSize,'fontname','Helvetica')
         set(cH(f),'location','southoutside');
         set(cH(f),'units','centimeters');
-        cBarPos = [14,1.2,4,.4];
+        cBarPos = [14.5,1.2,3,.35];
         set(cH(f),'position',cBarPos);
         
         %title(['Full RCA ' num2str(r)],'fontsize',fSize,'fontname','Arial');
@@ -82,7 +82,7 @@ for f= 1:length(freqsToUse)
         
         for c=1:length(curConds)
             valSet = ampVals(:,curFreq,nComp(r),:);
-            ampH(c) =plot(binVals,ampVals(:,curFreq,nComp(r),curConds(c)),'o','MarkerSize',5,'LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1,1,1]);
+            ampH(c) =plot(binVals,ampVals(:,curFreq,nComp(r),curConds(c)),'o','MarkerSize',5,'LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:),'markerfacecolor',[1,1,1]);
             hE = ErrorBars(binVals,ampVals(:,curFreq,nComp(r),curConds(c)),[errLB(:,curFreq,nComp(r),curConds(c)),errUB(:,curFreq,nComp(r),curConds(c))],'color',subColors(curConds(c),:),'type','bar','cap',false,'barwidth',lWidth);
             uistack(ampH(c),'bottom')
             cellfun(@(x) uistack(x,'bottom'), hE);
@@ -92,7 +92,8 @@ for f= 1:length(freqsToUse)
                 nFine = 1e2;
                 nrX = linspace( min(binVals), max(binVals), nFine )';
                 nrVals = hModel( nrX, NR_pOpt(:,curFreq,nComp(r),curConds(c)));
-                plot( nrX, nrVals, '-k','LineWidth',lWidth);
+                nR = plot( nrX, nrVals, '-k','LineWidth',lWidth);
+                uistack(nR,'bottom')
             else
             end
         end
@@ -108,7 +109,8 @@ for f= 1:length(freqsToUse)
         %yMax = ceil(max(valSet(:)))+yUnit;
         get(0,'Factory');
         set(0,'defaultfigurecolor',[1 1 1]);
-        set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0.1,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top','clipping','off', 'color','none');
+        set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[2,4,8,16,32],'ytick',0:yUnit:yMax,'Layer','top','clipping','off', 'color','none');
+        set(gca,'XMinorTick','off');
         xlim([xMin,xMax]);
         ylim([0,yMax])
         
@@ -139,9 +141,9 @@ for f= 1:length(freqsToUse)
             %                 lPos(2) = lPos(2) + -.04; %.05
             %                 set(lH,'position',lPos);
             if freqsToUse ==1
-                tH = text(60,4,sprintf('n = %0d',size(allRCA.data,2)),'fontsize',fSize,'fontname','Arial'); %(60,11,...) for first 2 args in 2F1 plot; (60,4...) for 1F1
+                tH = text(45,4,sprintf('n = %0d',size(allRCA.data,2)),'fontsize',fSize,'fontname','Arial'); %(60,11,...) for first 2 args in 2F1 plot; (60,4...) for 1F1
             else
-                tH = text(60,11,sprintf('n = %0d',size(allRCA.data,2)),'fontsize',fSize,'fontname','Arial');
+                tH = text(45,11,sprintf('n = %0d',size(allRCA.data,2)),'fontsize',fSize,'fontname','Arial');
             end
         end
         hold off;
