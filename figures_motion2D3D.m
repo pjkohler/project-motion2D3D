@@ -91,11 +91,11 @@ for e = 1:numExp
             if s==1
                 sH(f,e,1) = subplot(numExp,3,1+(e-1)*3);
                 curConds = find(ismember(condsToUse,1:4));
-                titleStr = sprintf('horizontal: %s',freqName);
+                titleStr = ['horizontal: \it\fontname{Arial}',sprintf('%s',freqName(1:2))];
             else
                 sH(f,e,2) = subplot(numExp,3,2+(e-1)*3);
                 curConds = find(ismember(condsToUse,5:8));
-                titleStr = sprintf('vertical: %s',freqName);
+                titleStr = ['vertical: \it\fontname{Arial}',sprintf('%s',freqName(1:2))];
             end
             hold on
 
@@ -182,7 +182,7 @@ for e = 1:numExp
             else
             end
             if e==1
-                title(titleStr,'fontsize',fSize,'fontname','Helvetica');
+                title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
             elseif e==numExp
                 if s==1
                     ylabel('amplitude (\muV)')
@@ -266,7 +266,7 @@ numTests = 8; % 4 conds, in-phase vs anti-phase, absolute vs relative
 xVals = 1:10;
 testSymbols = {'o','o','o','o','o','o','o','o'};
 markerOpts = {'MarkerSize',6,'LineWidth',lWidth,'markerfacecolor',[1,1,1]};
-freqLabels = {'1F1','2F1','3F1','4F1'};
+freqLabels = {'1F','2F','3F','4F'};
 % significance colors
 tHotColMap = jmaColors('pval');
 tHotColMap(end,:) = [1 1 1];
@@ -286,11 +286,11 @@ for e = 1:numExp
             if s==1
                 sH(f,e,1) =  subplot(numExp,2,s+(e-1)*2);
                 curConds = find(ismember(condsToUse,1:4));
-                titleStr = sprintf('horizontal: %s',freqName);
+                titleStr = ['horizontal: \it\fontname{Arial}',sprintf('%s',freqName)];
             else
                 sH(f,e,2) =  subplot(numExp,2,s+(e-1)*2);
                 curConds = find(ismember(condsToUse,5:8));
-                titleStr = sprintf('vertical: %s',freqName);
+                titleStr = ['vertical: \it\fontname{Arial}',sprintf('%s',freqName)];
             end
             hold on
            

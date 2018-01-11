@@ -10,7 +10,7 @@ setenv('DYLD_LIBRARY_PATH','')
 clear all; close all;
 
 %% Set up inputs 
-
+plotSupplemental = false;
 trialError = false;
 
 % we now hardcode the paths to the two data sets
@@ -19,7 +19,13 @@ dateStr(strfind(dateStr,'/')) ='';
 
 % make subject list
 topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/';
-expList = {'exp1','exp2','exp4','exp8'};
+if plotSupplemental
+    expList = {'exp4','exp5'};
+    condsToUse = [4,8];   
+else
+    expList = {'exp1','exp2','exp4','exp8'};
+    condsToUse = [3,7];
+end
 idList = [];
 for e = 1:length(expList);
     expFolder = subfolders(sprintf('%s/*%s*',topFolder,expList{e}),1);
@@ -56,7 +62,6 @@ saveFilePath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/paper
 
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
 freqsToUse= [2,4]; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
-condsToUse = [3,7];
 trialsToUse = []; %1:10; % subset of trials to use for analysis (if set to false or empty, all trials will be used)
 nReg=7; % RCA regularization constant (7-9 are typical values, but see within-trial eigenvalue plot in rca output)
 nComp=5; % number of RCs that you want to look at (3-5 are good values, but see across-trial eigenvalue plot in rca output)
@@ -142,32 +147,38 @@ delete(gcp('nocreate'));
 
 %% MAKE FIGURE
 close all
+rcNum = 1;
 lWidth = 1.5;
 fSize = 12;
 gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
 cBrewer = load('colorBrewer.mat');
 mainColors = [cBrewer.rgb20(5,:); cBrewer.rgb20(7,:)];
 
-topoVals = [superRCA(1).A(:,1);superRCA(2).A(:,1)];
+topoVals = [superRCA(1).A(:,rcNum);superRCA(2).A(:,rcNum)];
 rcaColorBar = [min(topoVals),max(topoVals)];
 newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
 rcaColorBar = [-newExtreme,newExtreme*1.001];
 plotLabel = {'A','B','C','D'};
+if plotSupplemental
+    flipIdx = [1,-1];
+else
+    flipIdx = [-1,1];
+end
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLevels{1});
-    valSet = squeeze(superRCA(f).stats.ampVals(:,1,:));
-    errSet1 = squeeze(superRCA(f).stats.errLB(:,1,:));
-    errSet2 = squeeze(superRCA(f).stats.errUB(:,1,:));
-    NRset = squeeze(superRCA(f).stats.NR_pOpt(:,1,:));
+    valSet = squeeze(superRCA(f).stats.ampVals(:,rcNum,:));
+    errSet1 = squeeze(superRCA(f).stats.errLB(:,rcNum,:));
+    errSet2 = squeeze(superRCA(f).stats.errUB(:,rcNum,:));
+    NRset = squeeze(superRCA(f).stats.NR_pOpt(:,rcNum,:));
     NRmodel = superRCA(f).stats.hModel;
-    maxNoise = max(superRCA(f).stats.noiseVals(:,1,:),[],3)';
+    maxNoise = max(superRCA(f).stats.noiseVals(:,rcNum,:),[],3)';
     
     egiH(f) = subplot(2,2,2+(f-1)*2);
     hold on
     if f == 1
-        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1)*-1,rcaColorBar,true);
+        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,rcNum)*flipIdx(f),rcaColorBar,true);
     else
-        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,1),rcaColorBar,true);
+        [figH(f),cH(f)] = mrC.plotOnEgi(superRCA(f).A(:,rcNum)*flipIdx(f),rcaColorBar,true);
     end
     hold off
     figH(f+2) = subplot(2,2,f+(f-1));
@@ -194,24 +205,27 @@ for f=1:length(freqsToUse)
     
     % make new p-values
     [rcaDataReal,rcaDataImag] = getRealImag(superRCA(f).data);
-    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataReal,'uni',false);
+    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(:,rcNum,:),3)),rcaDataReal,'uni',false);
     rcaDataReal = cell2mat(permute(rcaDataReal,[3,2,1]));
-    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataImag,'uni',false);
+    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(:,rcNum,:),3)),rcaDataImag,'uni',false);
     rcaDataImag = cell2mat(permute(rcaDataImag,[3,2,1]));
-            
+    
+    rc_tSqrdP(:,1+(f-1)*3) = superRCA(f).stats.tSqrdP(:,rcNum,1);
+    rc_tSqrdVal(:,1+(f-1)*3) = superRCA(f).stats.tSqrdVal(:,rcNum,1);
+    rc_tSqrdSig(:,1+(f-1)*3) = superRCA(f).stats.tSqrdSig(:,rcNum,1);
+    rc_tSqrdP(:,2+(f-1)*3) = superRCA(f).stats.tSqrdP(:,rcNum,2);
+    rc_tSqrdVal(:,2+(f-1)*3) = superRCA(f).stats.tSqrdVal(:,rcNum,2);
+    rc_tSqrdSig(:,2+(f-1)*3) = superRCA(f).stats.tSqrdSig(:,rcNum,2);
+    
     for b = 1:length(binVals)
         xyData = permute(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),[2,1,3]);
         tempStrct = tSquaredFourierCoefs(xyData);
-        rc_tSqrdP(f,b) = tempStrct.pVal;
-        rc_tSqrdVal(f,b) = tempStrct.tSqrd;
-        rc_tSqrdSig(f,b) = tempStrct.H;
-        
-        diffComplex = diff(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),1,3)';
-        diffMag(f,b) = sqrt(nanmean(diffComplex(:,1)).^2+nanmean(diffComplex(:,2)).^2);
+        rc_tSqrdP(b,3+(f-1)*3) = tempStrct.pVal;
+        rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tSqrd;
+        rc_tSqrdSig(b,3+(f-1)*3) = tempStrct.H;
+        diffMag(b,f) = tempStrct.testAmp;
     end
     
-    
-
     if f == 1     
         
         yUnit = 1;
@@ -240,7 +254,7 @@ for f=1:length(freqsToUse)
         plotLabel(f),'fontsize',fSize*2,'fontname','Helvetica');
     text(30,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
         plotLabel(f+2),'fontsize',fSize*2,'fontname','Helvetica');
-b
+
     % plot noise patch
     yNoiseVals = [0,maxNoise(1),maxNoise,maxNoise(end),0]; % start and end points just repeats of first and last
     xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
@@ -284,4 +298,26 @@ figPos = get(gcf,'pos');
 figPos(4) = figPos(4)/figPos(3)*17.8;
 figPos(3) = 17.8;
 set(gcf,'pos',figPos);
-export_fig(sprintf('%s/figure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+if plotSupplemental
+    export_fig(sprintf('%s/suppl_figure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+else
+    export_fig(sprintf('%s/figure5_combined.pdf',saveFilePath),'-pdf','-transparent',gcf);
+end
+
+
+%% MAKE TABLE
+if plotSupplemental
+    paperText = 'In 2nd harmonic data from Experiments 4 and 5, ';
+else
+    paperText = 'In 2nd harmonic data from Experiments 1,2,4 and 8, ';
+end
+
+T = table([rc_tSqrdSig(:,1),rc_tSqrdP(:,1),rc_tSqrdVal(:,1)], ...
+          [rc_tSqrdSig(:,2),rc_tSqrdP(:,2),rc_tSqrdVal(:,2)], ...
+          [rc_tSqrdSig(:,3),rc_tSqrdP(:,3),rc_tSqrdVal(:,3)], ...
+          [rc_tSqrdSig(:,4),rc_tSqrdP(:,4),rc_tSqrdVal(:,4)], ...
+          [rc_tSqrdSig(:,5),rc_tSqrdP(:,5),rc_tSqrdVal(:,5)], ...
+          [rc_tSqrdSig(:,6),rc_tSqrdP(:,6),rc_tSqrdVal(:,6)]);
+T.Properties.VariableNames = {'SecondHori','SecondVert','SecondPaired','FourthHori','FourthVert','FourthPaired'}
+
+    
