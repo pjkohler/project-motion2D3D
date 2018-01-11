@@ -267,7 +267,8 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     %close(pphysFig);
 
     %% LOAD IN EEG DATA
-
+    rcNum = 1;
+    
     for s = 1:length(subPaths)
         tempPath = subfolders(subPaths{s},1);
         tempPath = tempPath(cellfun(@(x) isempty(strfind(x,'mff')), tempPath));
@@ -634,17 +635,26 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                     
                     % make new p-values
                     [rcaDataReal,rcaDataImag] = getRealImag(pphysRCA(curFreq).data(curConds,:));
-                    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataReal,'uni',false);
+                    freqIdx = pphysRCA(curFreq).settings.freqIndices{3} == curFreq;
+                    rcaDataReal = cellfun(@(x) squeeze(nanmean(x(freqIdx,rcNum,:),3)),rcaDataReal,'uni',false);
                     rcaDataReal = cell2mat(permute(rcaDataReal,[3,2,1]));
-                    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(:,1,:),3)),rcaDataImag,'uni',false);
+                    rcaDataImag = cellfun(@(x) squeeze(nanmean(x(freqIdx,rcNum,:),3)),rcaDataImag,'uni',false);
                     rcaDataImag = cell2mat(permute(rcaDataImag,[3,2,1]));
+                    
+                    rc_tSqrdP(:,1+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdP(:,rcNum,1);
+                    rc_tSqrdVal(:,1+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdVal(:,rcNum,1);
+                    rc_tSqrdSig(:,1+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdSig(:,rcNum,1);
+                    rc_tSqrdP(:,2+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdP(:,rcNum,2);
+                    rc_tSqrdVal(:,2+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdVal(:,rcNum,2);
+                    rc_tSqrdSig(:,2+(s-1)*3) = pphysRCA(curFreq).stats.tSqrdSig(:,rcNum,2);
 
                     for b = 1:length(binVals)
                         xyData = permute(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),[2,1,3]);
                         tempStrct = tSquaredFourierCoefs(xyData);
-                        rc_tSqrdP(b,s) = tempStrct.pVal;
-                        rc_tSqrdVal(b,s) = tempStrct.tSqrd;
-                        rc_tSqrdSig(b,s) = tempStrct.H;
+                        rc_tSqrdP(b,3+(s-1)*3) = tempStrct.pVal;
+                        rc_tSqrdVal(b,3+(s-1)*3) = tempStrct.tSqrd;
+                        rc_tSqrdSig(b,3+(s-1)*3) = tempStrct.H;
+                        diffMag(b,s) = tempStrct.testAmp;
                     end
                 else
                 end
@@ -805,4 +815,12 @@ figPos(3) = 24;
 set(gcf,'pos',figPos);
 export_fig(sprintf('%s/figure4_complete.pdf',savePath),'-pdf','-transparent',gcf);
 
+%% MAKE TABLE
+T = table([rc_tSqrdSig(:,1),rc_tSqrdP(:,1),rc_tSqrdVal(:,1)], ...
+          [rc_tSqrdSig(:,2),rc_tSqrdP(:,2),rc_tSqrdVal(:,2)], ...
+          [rc_tSqrdSig(:,3),rc_tSqrdP(:,3),rc_tSqrdVal(:,3)], ...
+          [rc_tSqrdSig(:,4),rc_tSqrdP(:,4),rc_tSqrdVal(:,4)], ...
+          [rc_tSqrdSig(:,5),rc_tSqrdP(:,5),rc_tSqrdVal(:,5)], ...
+          [rc_tSqrdSig(:,6),rc_tSqrdP(:,6),rc_tSqrdVal(:,6)]);
+T.Properties.VariableNames = {'HoriInPh','HoriAntiPh','HoriPaired','VertInPh','VertAntiPh','VertPaired'}
 
