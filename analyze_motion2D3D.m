@@ -37,7 +37,7 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
     clear freqRCA;
     keepConditions = true;
     errorType = 'SEM';
-    doNR = false(4,5,8); % 4 freqs, 5 RCs, 8 conditions
+    doNR = false(4,6,8); % 4 freqs, 6 RCs (with comparison), 8 conditions
     doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
     condsToUse = 1:8;
     for f=1:6
@@ -49,79 +49,28 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
         else
             idxList = f;
         end
-        rcStruct = aggregateData(readyRCA(f).data,readyRCA(f).settings,keepConditions,errorType,trialError,doNR);
-        
-        compStruct = aggregateData(readyRCA(f).comparisonData,readyRCA(f).settings,keepConditions,errorType,trialError);
-        % note: no NR fitting on noise data
-        rcNoiseStrct1 = aggregateData(readyRCA(f).noiseData.lowerSideBand,readyRCA(f).settings,keepConditions,errorType,trialError,[]);
-        rcNoiseStrct2 = aggregateData(readyRCA(f).noiseData.higherSideBand,readyRCA(f).settings,keepConditions,errorType,trialError,[]);
-        compNoiseStrct1 = aggregateData(readyRCA(f).comparisonNoiseData.lowerSideBand,readyRCA(f).settings,keepConditions,errorType,trialError,[]);
-        compNoiseStrct2 = aggregateData(readyRCA(f).comparisonNoiseData.higherSideBand,readyRCA(f).settings,keepConditions,errorType,trialError,[]);
-        % snr
-        [rcSNR,rcNoiseVals] = computeSnr(rcStruct,rcNoiseStrct1,rcNoiseStrct2,false);
-        [compSNR,compNoiseVals] = computeSnr(compStruct,compNoiseStrct1,compNoiseStrct2,false);
-        
+        rcStruct = aggregateData(readyRCA(f),keepConditions,errorType,trialError,doNR);
         for i = 1:length(idxList)
             curIdx = idxList(i);
             % RC
-            readyRCA(curIdx).stats.ampVals(:,1:5,:) = rcStruct.ampBins(:,i,:,:);
-            readyRCA(curIdx).stats.errLB(:,1:5,:) = rcStruct.ampErrBins(:,i,:,:,1);
-            readyRCA(curIdx).stats.errUB(:,1:5,:) = rcStruct.ampErrBins(:,i,:,:,2);
-            readyRCA(curIdx).stats.snrVals(:,1:5,:) = rcSNR(:,i,:,:);
-            readyRCA(curIdx).stats.noiseVals(:,1:5,:) = rcNoiseVals(:,i,:,:);
-            readyRCA(curIdx).stats.NR_pOpt(:,1:5,:) = rcStruct.NakaRushton.pOpt(:,i,:,:);
-            readyRCA(curIdx).stats.NR_JKSE(:,1:5,:) = rcStruct.NakaRushton.JKSE(:,i,:,:);
-            readyRCA(curIdx).stats.NR_R2(1:5,:) = rcStruct.NakaRushton.R2(:,i,:,:);
+            readyRCA(curIdx).stats.Amp = squeeze(rcStruct.ampBins(:,i,:,:));
+            readyRCA(curIdx).stats.SubjectAmp = squeeze(rcStruct.subjectAmp(:,i,:,:,:));
+            readyRCA(curIdx).stats.ErrLB = squeeze(rcStruct.ampErrBins(:,i,:,:,1));
+            readyRCA(curIdx).stats.ErrUB = squeeze(rcStruct.ampErrBins(:,i,:,:,2));
+            readyRCA(curIdx).stats.NoiseAmp = squeeze(rcStruct.ampNoiseBins(:,i,:,:));
+            readyRCA(curIdx).stats.SubjectNoiseAmp = squeeze(rcStruct.subjectAmpNoise(:,i,:,:,:));
+            % Naka-Rushton
+            readyRCA(curIdx).stats.NR_Params = squeeze(rcStruct.NakaRushton.Params(:,i,:,:));
+            readyRCA(curIdx).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2(:,i,:,:));
+            readyRCA(curIdx).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE(:,i,:,:));
+            readyRCA(curIdx).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params(:,:,i,:,:));
             readyRCA(curIdx).stats.hModel = rcStruct.NakaRushton.hModel;
-            readyRCA(curIdx).stats.tSqrdP(:,1:5,:) = rcStruct.tSqrdP(:,i,:,:);
-            readyRCA(curIdx).stats.tSqrdSig(:,1:5,:) = rcStruct.tSqrdSig(:,i,:,:);
-            readyRCA(curIdx).stats.tSqrdVal(:,1:5,:) = rcStruct.tSqrdVal(:,i,:,:);
-            
-            % COMPARISON
-            readyRCA(curIdx).stats.ampVals(:,6,:) = compStruct.ampBins(:,i,:,:);
-            readyRCA(curIdx).stats.errLB(:,6,:) = compStruct.ampErrBins(:,i,:,:,1);
-            readyRCA(curIdx).stats.errUB(:,6,:) = compStruct.ampErrBins(:,i,:,:,2);
-            readyRCA(curIdx).stats.snrVals(:,6,:) = compSNR(:,i,:,:);
-            readyRCA(curIdx).stats.noiseVals(:,6,:) = compNoiseVals(:,i,:,:);
-            readyRCA(curIdx).stats.NR_pOpt(:,6,:) = compStruct.NakaRushton.pOpt(:,i,:,:);
-            readyRCA(curIdx).stats.NR_JKSE(:,6,:) = compStruct.NakaRushton.JKSE(:,i,:,:);
-            readyRCA(curIdx).stats.NR_R2(6,:) = compStruct.NakaRushton.R2(:,i,:,:);
-            readyRCA(curIdx).stats.tSqrdP(:,6,:) = compStruct.tSqrdP(:,i,:,:);
-            readyRCA(curIdx).stats.tSqrdSig(:,6,:) = compStruct.tSqrdSig(:,i,:,:);
-            readyRCA(curIdx).stats.tSqrdVal(:,6,:) = compStruct.tSqrdVal(:,i,:,:);
+            % t-values
+            readyRCA(curIdx).stats.tSqrdP = squeeze(rcStruct.tSqrdP(:,i,:,:));
+            readyRCA(curIdx).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig(:,i,:,:));
+            readyRCA(curIdx).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal(:,i,:,:)); 
         end
-         
-        
-        
-        
-        %ampVals(:,curIdx,1:5,:) = tempDataStrct.ampBins;
-        %errLB(:,curIdx,1:5,:)   = tempDataStrct.ampErrBins(:,:,:,:,1);
-        %errUB(:,curIdx,1:5,:)   = tempDataStrct.ampErrBins(:,:,:,:,2);
-        %tempNoiseStrct1 = aggregateData(curRCA.noiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-        %tempNoiseStrct2 = aggregateData(curRCA.noiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-        %[snrVals(:,curIdx,1:5,:),noiseVals(:,curIdx,1:5,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-        %NR_pOpt(:,curIdx,1:5,:) = tempDataStrct.NakaRushton.pOpt;
-        %NR_JKSE(:,curIdx,1:5,:) = tempDataStrct.NakaRushton.JKSE;
-        %NR_R2(curIdx,1:5,:) = tempDataStrct.NakaRushton.R2;
-        %if ~isempty(tempDataStrct.NakaRushton.hModel) && ~exist('hModel','var')
-        %    hModel = tempDataStrct.NakaRushton.hModel;
-        %else
-        %end
-
-        
-        
-        %ampVals(:,curIdx,6,:) = tempDataStrct.ampBins;
-        %errLB(:,curIdx,6,:)=tempDataStrct.ampErrBins(:,:,:,:,1);
-        %errUB(:,curIdx,6,:)=tempDataStrct.ampErrBins(:,:,:,:,2);
-        %tempNoiseStrct1 = aggregateData(curRCA.comparisonNoiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError);
-        %tempNoiseStrct2 = aggregateData(curRCA.comparisonNoiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError);
-        %[snrVals(:,curIdx,6,:),noiseVals(:,curIdx,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2);
-        
-        %NR_pOpt(:,curIdx,6,:) = tempDataStrct.NakaRushton.pOpt;
-        %NR_JKSE(:,curIdx,6,:) = tempDataStrct.NakaRushton.JKSE;
-        %NR_R2(curIdx,6,:) = tempDataStrct.NakaRushton.R2;      
     end
-    
     % shut down parallel pool, which was used for fitting Naka-Rushton
     delete(gcp('nocreate'));
 
@@ -213,10 +162,10 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
                 end
                 hold on
   
-                valSet = readyRCA(curFreq).stats.ampVals;
-                errSet1 = readyRCA(curFreq).stats.errLB;
-                errSet2 = readyRCA(curFreq).stats.errUB;
-                NRset = readyRCA(curFreq).stats.NR_pOpt;
+                valSet = readyRCA(curFreq).stats.Amp;
+                errSet1 = readyRCA(curFreq).stats.ErrLB;
+                errSet2 = readyRCA(curFreq).stats.ErrUB;
+                NRset = readyRCA(curFreq).stats.NR_Params;
                 NRmodel = readyRCA(curFreq).stats.hModel;
                 for c=1:length(curConds)
                     valH(c)=plot(binVals,valSet(:,r,curConds(c)),'o','MarkerSize',5,'LineWidth',lWidth*1.5,'Color',subColors(curConds(c),:),'markerfacecolor',[1,1,1]);
@@ -255,7 +204,7 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
                 xlim([xMin,xMax]);
                 ylim([0,yMax])
                 % plot noise patch
-                meanNoise = max(readyRCA(curFreq).stats.noiseVals(:,r,curConds),[],3)';
+                meanNoise = max(readyRCA(curFreq).stats.NoiseAmp(:,r,curConds),[],3)';
                 yNoiseVals = [0,meanNoise(1),meanNoise,meanNoise(end),0]; % start and end points just repeats of first and last
                 xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
                 pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
@@ -352,14 +301,4 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
     end
     save(sprintf('%s/plottingData.mat',saveLocation),'readyRCA');
     close all;
-    %% PLOT FIT ERRORS
-%     figure;
-%     hold on
-%     harmToPlot = 2;
-%     meanToPlot = squeeze(NR_pOpt(1,8+harmToPlot,1,:)); 
-%     errToPlot = squeeze(NR_JKSE(1,8+harmToPlot,1,:)); 
-%     plot(meanToPlot,'-ko');
-%     errorb(1:8,meanToPlot,errToPlot);
-%     hold off
-%     close all;
 end

@@ -99,11 +99,17 @@ for e = 1:numExp
             end
             hold on
 
-            valSet = readyRCA(curFreq).stats.ampVals;
-            errSet1 = readyRCA(curFreq).stats.errLB;
-            errSet2 = readyRCA(curFreq).stats.errUB;
-            NRset = readyRCA(curFreq).stats.NR_pOpt;
+            valSet = readyRCA(curFreq).stats.Amp;
+            errSet1 = readyRCA(curFreq).stats.ErrLB;
+            errSet2 = readyRCA(curFreq).stats.ErrUB;
+            NRset = readyRCA(curFreq).stats.NR_Params;
             NRmodel = readyRCA(curFreq).stats.hModel;
+            
+            % store NR for later
+            NakaRushton(e,f).Params = readyRCA(curFreq).stats.NR_Params;
+            NakaRushton(e,f).R2 = readyRCA(curFreq).stats.NR_R2;
+            NakaRushton(e,f).JKSE = readyRCA(curFreq).stats.NR_JKSE;
+            NakaRushton(e,f).JKParams = readyRCA(curFreq).stats.NR_JKParams;
             
             % store t-values for later
             rc_tSqrdP(e,f,s) = {permute(squeeze(readyRCA(curFreq).stats.tSqrdP(:,rcNum,curConds)),[2,1])};
@@ -168,7 +174,7 @@ for e = 1:numExp
             xlim([xMin,xMax]);
             ylim([0,yMax])
             % plot noise patch
-            meanNoise = max(readyRCA(curFreq).stats.noiseVals(:,rcNum,curConds),[],3)';
+            meanNoise = max(readyRCA(curFreq).stats.NoiseAmp(:,rcNum,curConds),[],3)';
             yNoiseVals = [0,meanNoise(1),meanNoise,meanNoise(end),0]; % start and end points just repeats of first and last
             xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
             pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
@@ -355,10 +361,132 @@ for f = 1:nFreq
 
 end
 
-       
-        
-    
-        
+
+%% MAKE NAKA-RUSHTON FIGURES
+close all;
+for e = 1:numExp
+    if any(e == [3,4])
+        subColors = alternaColors;
+    else
+        subColors = mainColors;
+    end
+    for f = 1:nFreq
+        figure(f);
+        freqName = freqLabels{f};
+        for s=1:2 % vertical or horizontal motion
+            if s==1
+                curConds = find(ismember(condsToUse,1:4));
+                titleStr = ['horizontal: \it\fontname{Arial}',sprintf('%s',freqName(1:2))];
+            else
+                curConds = find(ismember(condsToUse,5:8));
+                titleStr = ['vertical: \it\fontname{Arial}',sprintf('%s',freqName(1:2))];
+            end
+           
+            NRvals = cat(1,NakaRushton(e,f).Params,permute(NakaRushton(e,f).R2,[3,1,2]));
+            NRvals = squeeze(NRvals(:,rcNum,curConds));
+            NRerrors = squeeze(NakaRushton(e,f).JKSE(:,rcNum,curConds));
+            
+            % do paired tests
+            testVal = squeeze(NakaRushton(e,f).JKParams(:,:,rcNum,curConds));
+            testVal = permute(testVal,[2,1,3]); % move subjects to first dim
+            
+            tIdx = [1,2;3,4;1,3;2,4]; % mot ref vs no ref, disp ref vs no ref, relMot vs no relDisp, absMot vs no absDisp
+            jkDf = size(testVal,1)-1;
+            for pT=1:length(tIdx) % do four paired tests
+                 % only look at c50 and rMax
+                diffErr = jackKnifeErr(testVal(:,[1,3,4],tIdx(pT,1))-testVal(:,[1,3,4],tIdx(pT,2)));
+                grandDiff = NRvals([1,3,4],tIdx(pT,1)) - NRvals([1,3,4],tIdx(pT,2));
+                paramPairedT(:,pT+(s-1)*4,f,e) = grandDiff'./diffErr;
+                paramPairedP(:,pT+(s-1)*4,f,e) = 2*tcdf( -abs(paramPairedT(:,pT+(s-1)*4,f,e)) , jkDf);
+            end
+            
+            subPlotOrder = [1,2,5,6];
+            paramList = [1,3,4,6];
+            for z = 1:4 % five parameters (including R2)
+                sH(f,e,s) = subplot(4,1,z);
+                hold on
+                xVals = (1:4)+5*(s-1)+10*(e-1);
+                arrayfun(@(x) bar(xVals(x),NRvals(paramList(z),x),'facecolor',subColors(x,:),'edgecolor','none'),1:4,'uni',false);
+                if paramList(z) ~= 6
+                    arrayfun(@(x) ...
+                        ErrorBars(xVals(x),NRvals(paramList(z),x),NRerrors(paramList(z),x),'color',[0,0,0],'type','bar','cap',false,'barwidth',lWidth),...
+                        1:4,'uni',false);
+                else
+                end
+                if e == numExp
+                    switch paramList(z)
+                        case 1
+                            ylabel('c50');
+                            yMin = 0; yMax = 15; yUnit = 5;
+                        case 2
+                            ylabel('exponent');
+                            yMin = 0; yMax = 1; yUnit = 1;
+                        case 3
+                            ylabel('rMax');
+                            yMin = 0; yMax = 4; yUnit = 1;
+                        case 4
+                            ylabel('baseline');
+                            yMin = 0; yMax = 2; yUnit = 1;
+                        case 6
+                            ylabel('R2');
+                            yMin = 0; yMax = 1; yUnit = 0.5;
+                        otherwise
+                    end
+                    gcaOpts{4} = [0.01,0.01];
+                    ylim([yMin,yMax]);
+                    set(gca, gcaOpts{:});               
+                    if z == 1
+                        set(gca,'YTickLabel',sprintf('%0.0f|',yMin:yUnit:yMax))
+                        set(gca,'xtick',[],'ytick',yMin:yUnit:yMax);
+                        arrayfun(@(x) text(5+(x-1)*10,max(get(gca,'ylim')), ...
+                                [sprintf('Exp. %0.0f: ',adultExp(x)),...
+                                '\it\fontname{Arial}',sprintf('%s',freqName(1:2))],...
+                                'horizontalalignment','center'),...
+                                1:numExp,'uni',false);
+                    elseif z == 4
+                        set(gca,'YTickLabel',sprintf('%0.1f|',yMin:yUnit:yMax))
+                        set(gca,'xtick',[2.5:5:50],'ytick',yMin:yUnit:yMax,'xticklabel',{'Hori','Vert'},'clipping','off');
+                    else
+                        set(gca,'YTickLabel',sprintf('%0.1f|',yMin:yUnit:yMax))
+                        set(gca,'xtick',[],'ytick',yMin:yUnit:yMax);
+                    end
+
+                    hold on
+                    plot(get(gca,'xlim'),zeros(2,1),'k','color',[0 0 0],'linewidth',lWidth)
+                    if z == 4
+                        a2 = axes;
+                        hold on
+                        arrayfun(@(x) plot(ones(1,2)*x,[-1,1],'color',[0 0 0],'linewidth',lWidth),1:4);
+                        xlim([0,5]);
+                        ylim([-1,1]);
+                        set(a2, 'Color', 'none', 'Visible', 'off');
+                    else
+                    end
+                    hold off
+                else
+                end
+            end
+        end
+    end
+end
+for f = 1:nFreq
+    figure(f)
+    drawnow;
+    set(gcf, 'units', 'centimeters');
+    figPos = get(gcf,'pos');
+    figPos(4) = figWidth;
+    figPos(3) = figHeight;
+    set(gcf,'pos',figPos);
+    export_fig(sprintf('/Users/kohler/Desktop/adultExp_Naka%0.0f.pdf',f),'-pdf','-transparent',gcf);        
+end
+
+% make table of paired results
+InPhaseHori.T = table([squeeze(paramPairedP(1,1,2,:)), squeeze(paramPairedT(1,1,2,:))], ...
+          [squeeze(paramPairedP(2,1,2,:)), squeeze(paramPairedT(2,3,2,:))], ...
+          [squeeze(paramPairedP(3,1,2,:)), squeeze(paramPairedT(3,3,2,:))] ...
+          );
+InPhaseHori.T.Properties.VariableNames = {'c50','rMax','b'};
+
 
 
     
