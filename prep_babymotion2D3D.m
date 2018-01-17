@@ -39,7 +39,7 @@ expIdx = [expIdx; ones(size(subfolders(sprintf('%s/*20*',dataLocation))))];
 
 %%  SET UP INPUTS
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
-freqsToUse= 2; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
+freqsToUse= 1; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
 trialsToUse = []; % subset of trials to use for analysis (if set to false or empty, all trials will be used)
 condsToUse = 1:4; % if you want to include all conditions, create a vector here listing all condition numbers
 condSep = [3,7];
@@ -50,11 +50,12 @@ nCond = length(condsToUse);
 chanToCompare = 75; % channel to use for a performance evaluation, can be []
 dataType = 'RLS'; % can also be 'DFT' if you have DFT exports
 rcPlotStyle = 'matchMaxSignsToRc1'; % not req'd. see 'help rcaRun', can be: 'matchMaxSignsToRc1' (default) or 'orig'
-forceSourceData = true; % generate source data for first instance of rca?
+forceSourceData = false; % generate source data for first instance of rca?
 keepConditions = true;
 errorType = 'SEM';
-doNR = true(1,5,4); % 5 freqs, 5 RCs + OZ, 4 conditions
-trialError = true;
+doNR = false(4,6,8); % 4 freqs, 6 RCs (with comparison), 8 conditions
+doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
+trialError = false;
 doExp = 1;
 
 %%  RUN RCA
@@ -67,11 +68,11 @@ for doExp = min(expIdx):max(expIdx)
     subsToUse = ismember(expIdx,doExp);
     
     %do RCA on all DATA
-    allRCA = rcaSweep(folderNames, binsToUse, freqsToUse,condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,true);
+    allRCA = rcaSweep(folderNames, binsToUse, freqsToUse,condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,forceSourceData);
     export_fig(sprintf('%s/BabyCombined%dF%dF_cov.pdf',figureFolder,min(freqsToUse),max(freqsToUse)),'-pdf','-transparent',gcf);
     
     for f=1:length(freqsToUse)
-        freqRCA(f) = rcaSweep(folderNames(subsToUse),binsToUse,freqsToUse(f),condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,true);
+        freqRCA(f) = rcaSweep(folderNames(subsToUse),binsToUse,freqsToUse(f),condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,false);
         export_fig(sprintf('%s/BabyCombinedRCA%dF1%dF1_cov.pdf',figureFolder,min(freqsToUse),max(freqsToUse)),'-pdf','-transparent',gcf);
         rcaH = grabCovFig(gcf);
         export_fig(sprintf('%s/BabyCombined%dRCA_cov.pdf',figureFolder,freqsToUse(f)),'-pdf','-transparent',rcaH);
@@ -114,54 +115,46 @@ for doExp = min(expIdx):max(expIdx)
 end
 
 %% Compute Values for Plotting 
+babyRCA = freqRCA;
+babyRCA = cat(1,babyRCA,allRCA); % repeat allRCA, this is only done to preserve topographies in later code
 for f=1:length(freqsToUse)+1
     fprintf('%d\n',f);
     if f==length(freqsToUse)+1
-        curRCA = allRCA;
-        %curIdx = (length(freqsToUse)+1):(length(freqsToUse)+2);
-        curIdx = (length(freqsToUse)+1);
+        idxList = (1:length(freqsToUse))+length(freqsToUse);
     else
-        curRCA = freqRCA(f);
-        curIdx = f;
-    end
-    
-    tempDataStrct = aggregateData(curRCA.data,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    ampVals(:,curIdx,1:nComp,:) = tempDataStrct.ampBins;
-    errLB(:,curIdx,1:nComp,:)   =tempDataStrct.ampBins-tempDataStrct.ampErrBins(:,:,:,:,1);
-    errUB(:,curIdx,1:nComp,:)   =tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
-    tempNoiseStrct1 = aggregateData(curRCA.noiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    tempNoiseStrct2 = aggregateData(curRCA.noiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    [snrVals(:,curIdx,1:nComp,:),noiseVals(:,curIdx,1:nComp,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-    NR_pOpt(:,curIdx,1:nComp,:) = tempDataStrct.NakaRushton.pOpt;
-    NR_JKSE(:,curIdx,1:nComp,:) = tempDataStrct.NakaRushton.JKSE;
-    NR_R2(curIdx,1:nComp,:) = tempDataStrct.NakaRushton.R2;
-    if ~isempty(tempDataStrct.NakaRushton.hModel) && ~exist('hModel','var')
-        hModel = tempDataStrct.NakaRushton.hModel;
-    else
-    end
-    delete(gcp('nocreate'));
-    
-    % COMPARISON
-    tempDataStrct = aggregateData(curRCA.comparisonData,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    ampVals(:,curIdx,(nComp+1),:) = tempDataStrct.ampBins;
-    errLB(:,curIdx,(nComp+1),:)=tempDataStrct.ampBins-tempDataStrct.ampErrBins(:,:,:,:,1);
-    errUB(:,curIdx,(nComp+1),:)=tempDataStrct.ampErrBins(:,:,:,:,2)-tempDataStrct.ampBins;
-    tempNoiseStrct1 = aggregateData(curRCA.comparisonNoiseData.lowerSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    tempNoiseStrct2 = aggregateData(curRCA.comparisonNoiseData.higherSideBand,curRCA.settings,keepConditions,errorType,trialError,doNR);
-    [snrVals(:,curIdx,(nComp+1),:),noiseVals(:,curIdx,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-    NR_pOpt(:,curIdx,(nComp+1),:) = tempDataStrct.NakaRushton.pOpt;
-    NR_JKSE(:,curIdx,(nComp+1),:) = tempDataStrct.NakaRushton.JKSE;
-    NR_R2(curIdx,(nComp+1),:) = tempDataStrct.NakaRushton.R2;
-    delete(gcp('nocreate'));
-end
-
-for f= length(allRCA.data(:,1)):-1:1
-    if isnan(allRCA.data{f,1}(1,1,1))
-        allRCA.data(f,:)=[];
-        allRCA.comparisonData(f,:)=[];
+        idxList = f;
+    end       
+    rcStruct = aggregateData(babyRCA(f),keepConditions,errorType,trialError,doNR);
+    for i = 1:length(idxList)
+        curIdx = idxList(i);
+        % RC
+        babyRCA(curIdx).stats.Amp = squeeze(rcStruct.ampBins(:,i,:,:));
+        babyRCA(curIdx).stats.SubjectAmp = squeeze(rcStruct.subjectAmp(:,i,:,:,:));
+        babyRCA(curIdx).stats.ErrLB = squeeze(rcStruct.ampErrBins(:,i,:,:,1));
+        babyRCA(curIdx).stats.ErrUB = squeeze(rcStruct.ampErrBins(:,i,:,:,2));
+        babyRCA(curIdx).stats.NoiseAmp = squeeze(rcStruct.ampNoiseBins(:,i,:,:));
+        babyRCA(curIdx).stats.SubjectNoiseAmp = squeeze(rcStruct.subjectAmpNoise(:,i,:,:,:));
+        % Naka-Rushton
+        babyRCA(curIdx).stats.NR_Params = squeeze(rcStruct.NakaRushton.Params(:,i,:,:));
+        babyRCA(curIdx).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2(:,i,:,:));
+        babyRCA(curIdx).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE(:,i,:,:));
+        babyRCA(curIdx).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params(:,:,i,:,:));
+        babyRCA(curIdx).stats.hModel = rcStruct.NakaRushton.hModel;
+        % t-values
+        babyRCA(curIdx).stats.tSqrdP = squeeze(rcStruct.tSqrdP(:,i,:,:));
+        babyRCA(curIdx).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig(:,i,:,:));
+        babyRCA(curIdx).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal(:,i,:,:));
     end
 end
+% shut down parallel pool, which was used for fitting Naka-Rushton
+delete(gcp('nocreate'));
 
-freqRCA((length(freqsToUse)+1):(length(freqsToUse)*2)) = allRCA;
+% NOT SURE WHAT THIS CODE WAS EVER DOING
+% for f= length(allRCA.data(:,1)):-1:1
+%     if isnan(allRCA.data{f,1}(1,1,1))
+%         allRCA.data(f,:)=[];
+%         allRCA.comparisonData(f,:)=[];
+%     end
+% end
 
-save(sprintf('%s/BabyDataOutput_%dF1', figureFolder, freqsToUse));
+save(sprintf('%s/BabyDataOutput_%dF1', figureFolder, freqsToUse),'babyRCA');
