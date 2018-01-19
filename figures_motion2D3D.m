@@ -4,6 +4,8 @@
 %analyze_motion2D3D(4);
 %analyze_motion2D3D(5);
 %analyze_motion2D3D(8);
+clear all;
+close all;
 
 adultExp = [1,2,3,4,5];
 plotType = 'freq';
@@ -33,7 +35,6 @@ xMin = .4; xMax = 18;
 
 nFreq = 4;
 numExp = length(adultExp);
-close all;
 rcNum = 1;
 figLabel = {'A','B','C','D','E','F','G','H','I','J'};
 flipIdx = [1,-1,1,1,1;
@@ -365,8 +366,8 @@ end
 %% MAKE NAKA-RUSHTON FIGURES
 close all;
 for e = 1:numExp
-    if any(e == [3,4])
-        subColors = alternaColors;
+    if any(e == [4,5])
+        subColors = alternaolors;
     else
         subColors = mainColors;
     end
