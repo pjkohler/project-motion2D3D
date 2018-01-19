@@ -10,7 +10,7 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
     
     %% TAKE CARE OF INPUT ARGUMENTS
     if nargin < 1
-        doExp = 1;
+        doExp = [1,2,3,4,5];
     else
     end
     if nargin < 2
@@ -25,6 +25,16 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
         talkFigs = false;
     else
     end
+    
+    if numel(doExp) > 1
+        for z = 1:length(doExp)
+            analyze_motion2D3D(doExp(z),trialError,plotType,talkFigs);
+        end
+        return;
+    else
+    end
+    
+    fprintf('\n ... running exp %0.0f ...\n',doExp);
     
     saveLocation = sprintf('/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/exp%d',doExp);
     saveFileName = sprintf('%s/rcaData.mat',saveLocation);

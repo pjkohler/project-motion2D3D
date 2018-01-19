@@ -14,7 +14,7 @@ setenv('DYLD_LIBRARY_PATH','')
 %% IDENTIFY DATA LOCATION
 folderNames =[];
 expIdx = [];
-adultExp = [1,2,4,5,8];
+adultExp = [1,2,3,4,5];
 topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
 for z=1:length(adultExp) % load all adult experiments
     dataLocation(z) = subfolders(sprintf('%s/exp%0.0f*',topFolder,adultExp(z)),1);

@@ -5,7 +5,7 @@
 %analyze_motion2D3D(5);
 %analyze_motion2D3D(8);
 
-adultExp = [1,2,4,5,8];
+adultExp = [1,2,3,4,5];
 plotType = 'freq';
 figFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures';
 %figFolder = '/Users/kohler/Desktop/figures';
@@ -481,18 +481,22 @@ for f = 1:nFreq
 end
 
 paramNames = {'c50','rMax','b'};
+orientNames = {'H','V'};
+testNames =  {'InRefVsNo', 'AntiRefVsNo', 'RefInVsAnti', 'NoRefInVsAnti'};
 
 % make table of paired results
-InPhaseHori.T = table([squeeze(paramPairedP(1,1,2,:)), squeeze(paramPairedT(1,1,2,:)),squeeze(paramPairedP(1,1,2,:))<0.05], ...
-          [squeeze(paramPairedP(2,1,2,:)), squeeze(paramPairedT(2,1,2,:)),squeeze(paramPairedP(2,1,2,:))<0.05], ...
-          [squeeze(paramPairedP(3,1,2,:)), squeeze(paramPairedT(3,1,2,:)),squeeze(paramPairedP(3,1,2,:))<0.05] ...
-          );
-InPhaseHori.T.Properties.VariableNames = paramNames;
-InPhaseVert.T = table([squeeze(paramPairedP(1,5,2,:)), squeeze(paramPairedT(1,5,2,:)),squeeze(paramPairedP(1,5,2,:))<0.05], ...
-          [squeeze(paramPairedP(2,5,2,:)), squeeze(paramPairedT(2,5,2,:)),squeeze(paramPairedP(2,5,2,:))<0.05], ...
-          [squeeze(paramPairedP(3,5,2,:)), squeeze(paramPairedT(3,5,2,:)),squeeze(paramPairedP(3,5,2,:))<0.05] ...
-          );
-InPhaseVert.T.Properties.VariableNames = paramNames;
+freqNum = 2;
+for z = 1:4
+    for s = 1:2
+        curIdx = z+(s-1)*4;
+        motion2D3D_stats{curIdx} = table(...
+            [squeeze(paramPairedT(1,curIdx,freqNum,:)), squeeze(paramPairedP(1,curIdx,freqNum,:)),squeeze(paramPairedP(1,curIdx,freqNum,:))<0.05], ...
+            [squeeze(paramPairedT(2,curIdx,freqNum,:)), squeeze(paramPairedP(2,curIdx,freqNum,:)),squeeze(paramPairedP(2,curIdx,freqNum,:))<0.05], ...
+            [squeeze(paramPairedT(3,curIdx,freqNum,:)), squeeze(paramPairedP(3,curIdx,freqNum,:)),squeeze(paramPairedP(3,curIdx,freqNum,:))<0.05] );
+        motion2D3D_stats{curIdx}.Properties.VariableNames = paramNames;
+        motion2D3D_stats{curIdx}.Properties.Description =sprintf('%s:%s',testNames{z},orientNames{s});
+    end
+end
 
 
 
