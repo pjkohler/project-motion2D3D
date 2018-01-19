@@ -16,13 +16,12 @@ setenv('DYLD_LIBRARY_PATH','')
 
 %mainPath = '/Users/labmanager/Desktop/LabManager/WM_Data/2017_2DBaby/';
 mainPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
-figureFolder = sprintf('%s/figures/exp3',mainPath);
+figureFolder = sprintf('%s/figures/infant_exp',mainPath);
 
 %% IDENTIFY DATA LOCATION
 folderNames=[];
 expIdx=[];
-dataLocation = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/exp3_infants';
-%dataLocation = '/Users/labmanager/Desktop/LabManager/WM_Data/2017_2DBaby/2DBaby_Data/TESTDATA';
+dataLocation = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/infant_exp';
 folderNames = [folderNames; subfolders(sprintf('%s/*20*',dataLocation),1)]; %change back to 128 between wild cards
 expIdx = [expIdx; ones(size(subfolders(sprintf('%s/*20*',dataLocation))))];
 
@@ -39,7 +38,7 @@ expIdx = [expIdx; ones(size(subfolders(sprintf('%s/*20*',dataLocation))))];
 
 %%  SET UP INPUTS
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
-freqsToUse= 1; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
+freqsToUse= 2; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
 trialsToUse = []; % subset of trials to use for analysis (if set to false or empty, all trials will be used)
 condsToUse = 1:4; % if you want to include all conditions, create a vector here listing all condition numbers
 condSep = [3,7];

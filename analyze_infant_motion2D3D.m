@@ -20,15 +20,12 @@
 
 %mainPath = '/Users/labmanager/Desktop/LabManager/WM_Data/2017_2DBaby';
 mainPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
-figureFolder = sprintf('%s/figures/exp3',mainPath);
-doFreq = 1;
+figureFolder = sprintf('%s/figures/infant_exp',mainPath);
+doFreq = 2;
 load(sprintf('%s/BabyDataOutput_%dF1', figureFolder, doFreq),'babyRCA'); %file name from prep workspace export
-
-%% DO STATS
-
+rcaType = 'freq';
 
 %% PLOT RCs
-rcaType = 'freq';
 
 if diff(arrayfun(@(x) babyRCA(x).settings.freqsToUse, 1:length(babyRCA))) ~= 0
     error('different frequencies used in different RCA iterations');
@@ -68,9 +65,12 @@ for f= 1:length(freqsToUse)
     else
         curFreq = f;
     end
+    
+
+    
     figure;
     for r = 1:length(nComp)
-        
+       
         if r<nComp+1
             egiH(r) = subplot(length(nComp),3,3+(r-1)*2);
             hold on
@@ -96,8 +96,22 @@ for f= 1:length(freqsToUse)
         valSet = babyRCA(curFreq).stats.Amp;
         errSet1 = babyRCA(curFreq).stats.ErrLB;
         errSet2 = babyRCA(curFreq).stats.ErrUB;
-        NRset = babyRCA(curFreq).stats.NR_Params;
+        NRvals = babyRCA(curFreq).stats.NR_Params;
+        NRerrs = babyRCA(curFreq).stats.NR_JKSE;
         NRmodel = babyRCA(curFreq).stats.hModel;
+        
+         % do paired tests
+        testVal = squeeze(babyRCA(curFreq).stats.NR_JKParams(:,:,nComp(r),curConds));
+        testVal = permute(testVal,[2,1,3]); % move subjects to first dim    
+        tIdx = [1,2;3,4;1,3;2,4]; % mot ref vs no ref, disp ref vs no ref, relMot vs no relDisp, absMot vs no absDisp
+        paramIdx = [1,2,3,4];% only look at c50 and rMax
+        jkDf = size(testVal,1)-1;
+        for pT=1:length(tIdx) % do four paired tests  
+            diffErr = jackKnifeErr(testVal(:,paramIdx,tIdx(pT,1))-testVal(:,paramIdx,tIdx(pT,2)));
+            grandDiff = NRvals(paramIdx,nComp(r),tIdx(pT,1)) - NRvals(paramIdx,nComp(r),tIdx(pT,2));
+            paramPairedT(:,pT,f) = grandDiff'./diffErr;
+            paramPairedP(:,pT,f) = 2*tcdf( -abs(paramPairedT(:,pT,f)) , jkDf);
+        end
         
         for c=1:length(curConds)
             ampH(c) =plot(binVals,valSet(:,nComp(r),curConds(c)),'o','MarkerSize',5,'LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1,1,1]);
@@ -106,10 +120,10 @@ for f= 1:length(freqsToUse)
             cellfun(@(x) uistack(x,'bottom'), hE);
             hold on
             
-            if ~isnan(NRset(1,nComp(r),curConds(c))) % plot Naka-Rushton
+            if ~isnan(NRvals(1,nComp(r),curConds(c))) % plot Naka-Rushton
                 nFine = 1e2;
                 nrX = linspace( min(binVals), max(binVals), nFine )';
-                nrVals = NRmodel( nrX, NRset(:,nComp(r),curConds(c)));
+                nrVals = NRmodel( nrX, NRvals(:,nComp(r),curConds(c)));
                 nR(c) = plot( nrX, nrVals, '-k','LineWidth',lWidth);
                
             else
@@ -118,15 +132,12 @@ for f= 1:length(freqsToUse)
         arrayfun(@(x) uistack(x,'bottom'),nR);
         
         if freqsToUse(f) == 2 && r == 1
-            yUnit = 3;
-            yMax = 9.0;
-            yFormat = '%0.0f';
+            yUnit = 2;
+            yMax = 10.0;
         else
             yUnit = 1;
             yMax = 4;
-            yFormat = '%0.0f';
         end
-        yLabels = arrayfun(@(x) num2str(x,yFormat),0:yUnit:yMax,'uni',false);
 %         for z = 1:length(yLabels)
 %             if strcmp(yLabels{z}(1),'0')
 %                 yLabels{z}(1) = ' ';
@@ -136,7 +147,7 @@ for f= 1:length(freqsToUse)
         
         %yUnit = floor((ceil(max(valSet(:)))/5)*10)/10;
         %yMax = ceil(max(valSet(:)))+yUnit;
-        set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[2,4,8,16,32],'ytick',0:yUnit:yMax,'yticklabel',yLabels,'Layer','top','clipping','off', 'color','none');
+        set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[2,4,8,16,32],'ytick',0:yUnit:yMax,'Layer','top','clipping','off', 'color','none');
         set(gca,'XMinorTick','off');
         xlim([xMin,xMax]);
         ylim([0,yMax])
@@ -174,12 +185,18 @@ for f= 1:length(freqsToUse)
         addX = 0.25;
         addY = 0.25;
         set(egiH(r),'units','centimeters');
-        newPos = get(egiH(r),'position');
-        newPos(1) = newPos(1) - newPos(3)*addX*1.5;
-        newPos(2) = newPos(2) - newPos(4)*addY*2.2;
-        newPos(3) = newPos(3)+newPos(3)*addX;
-        newPos(4) = newPos(4)+newPos(4)*addY;
-        set(egiH(r),'position',newPos);
+        if doFreq == 1
+            newPos = get(egiH(r),'position');
+            newPos(1) = newPos(1) - newPos(3)*addX*1.5;
+            newPos(2) = newPos(2) - newPos(4)*addY*2.2;
+            newPos(3) = newPos(3)+newPos(3)*addX;
+            newPos(4) = newPos(4)+newPos(4)*addY;
+            set(egiH(r),'position',newPos);
+            save(sprintf('%s/EEGpos.mat',figureFolder),'newPos');
+        else
+            load(sprintf('%s/EEGpos.mat',figureFolder),'newPos');
+            set(egiH(r),'position',newPos);
+        end
         
         set(gcf, 'units', 'centimeters');
         figPos = get(gcf,'pos');
@@ -192,3 +209,14 @@ for f= 1:length(freqsToUse)
     end
 end
 save(sprintf('%s/BabyDataOutput_%dF1',figureFolder,freqsToUse));
+%% PLOT NR  
+close all;
+figure;
+for z = 1:length(paramIdx)
+    subplot(1,4,z);
+    hold on
+    plot(1:4,squeeze(NRvals(paramIdx(z),nComp(r),:)),'-o')
+    errorb(1:4,squeeze(NRvals(paramIdx(z),nComp(r),:)),squeeze(NRerrs(paramIdx(z),nComp(r),:)));
+    hold off
+    xlim([0.5,4.5]);
+end
