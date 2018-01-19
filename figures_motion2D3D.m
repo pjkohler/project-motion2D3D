@@ -41,9 +41,17 @@ flipIdx = [1,-1,1,1,1;
            -1,-1,1,1,1;
            -1,-1,1,1,-1;
            -1,-1,-1,-1,-1];
+
+paperFolder = sprintf('%s/paper_figures/exp1-5',figFolder);       
+if ~exist(paperFolder,'dir')
+    mkdir(paperFolder);
+else
+end    
+       
+       
 for e = 1:numExp
     load(sprintf('%s/exp%0.0f/plottingData.mat',figFolder,adultExp(e)));
-    if any(e == [3,4])
+    if any(e == [4,5])
         subColors = alternaColors;
     else
         subColors = mainColors;
@@ -251,7 +259,7 @@ for f = 1:nFreq
     figPos(4) = figHeight;
     figPos(3) = figWidth;
     set(gcf,'pos',figPos);
-    export_fig(sprintf('%s/paper_figures/adultExp_harm%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
+    export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_harm%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
     
 %     if plotSNR        
 %         
@@ -279,7 +287,7 @@ tHotColMap = jmaColors('pval');
 tHotColMap(end,:) = [1 1 1];
 pCutOff = 0.05;
 for e = 1:numExp
-    if any(e == [3,4])
+    if any(e == [4,5])
         subColors = alternaColors;
     else
         subColors = mainColors;
@@ -358,7 +366,7 @@ for f = 1:nFreq
 %         %subPosNew(2) = subPos(2)-0.02;
 %         set(sH(f,e,2), 'Position', subPosNew);
 %     end
-        export_fig(sprintf('%s/paper_figures/adultExp_stats%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
+        export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_stats%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
 
 end
 
@@ -367,7 +375,7 @@ end
 close all;
 for e = 1:numExp
     if any(e == [4,5])
-        subColors = alternaolors;
+        subColors = alternaColors;
     else
         subColors = mainColors;
     end
@@ -478,7 +486,7 @@ for f = 1:nFreq
     figPos(4) = figWidth;
     figPos(3) = figHeight;
     set(gcf,'pos',figPos);
-    export_fig(sprintf('/Users/kohler/Desktop/adultExp_Naka%0.0f.pdf',f),'-pdf','-transparent',gcf);        
+    export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_Naka%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
 end
 
 paramNames = {'c50','rMax','b'};
@@ -498,7 +506,7 @@ for z = 1:4
         motion2D3D_stats{curIdx}.Properties.Description =sprintf('%s:%s',testNames{z},orientNames{s});
     end
 end
-
+close all;
 
 
     
