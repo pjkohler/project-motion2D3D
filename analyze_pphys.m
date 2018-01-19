@@ -47,7 +47,7 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     adultExp = [1,2,3,4,5];
     % NOTE! should be path corresponding to blank (2);
     rcaPath = sprintf('%s/figures/exp%0.0f/plottingData.mat',topPath,adultExp(2));
-    savePath = sprintf('%s/figures/paper_figures/pphys_exp',topPath);
+    savePath = sprintf('%s/figures/paper_figures/figure4',topPath);
     % string for saving the data
     saveStr = datestr(clock,26);
     saveStr(strfind(saveStr,'/')) ='';
