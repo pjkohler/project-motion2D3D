@@ -42,16 +42,12 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     %% PRELIMINARY
     % folder names
     topPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
-    if expNum == 1
-        dataPath = sprintf('%s/exp6_pphys1',topPath);
-    else
-        dataPath = sprintf('%s/exp7_pphys2',topPath);
-    end
+    dataPath = sprintf('%s/pphys_exp%0.0f',topPath,expNum);
     subPaths = subfolders(sprintf('%s/*20*',dataPath),1);
-    adultExp = [1,2,4,5,8];
+    adultExp = [1,2,3,4,5];
     % NOTE! should be path corresponding to blank (2);
     rcaPath = sprintf('%s/figures/exp%0.0f/plottingData.mat',topPath,adultExp(2));
-    savePath = sprintf('%s/figures/paper_figures/figure4',topPath);
+    savePath = sprintf('%s/figures/paper_figures/pphys_exp',topPath);
     % string for saving the data
     saveStr = datestr(clock,26);
     saveStr(strfind(saveStr,'/')) ='';
@@ -200,6 +196,16 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
 
     subPaths = subPaths(includeIdx);
     
+    %% DO PPHYS STATS
+    testData = exp(aveBoth(:,includeIdx));
+    for z = 1:2
+        [pphysTest(z).Sig, pphysTest(z).P,ci,testStrct] = ttest(testData(z+(z-1),:),testData(z+z,:),'dim',2,'tail','both');
+        pphysTest(z).df = testStrct.df;
+        pphysTest(z).tstat = testStrct.tstat;
+        factorDiff(z) = exp(bothGrand(z+z))/exp(bothGrand(z+(z-1)));
+    end
+   
+    
     %% PLOT PPHYS
     lWidth = 2;
     fSize = 12;
@@ -347,7 +353,7 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
     % do this separately for each harmonic
     load(rcaPath,'readyRCA');
     warning('off','all')
-    doNR = false(1,5,8); % 1 freqs, 5 RCs, 8 conditions
+    doNR = false(1,6,8); % 1 freqs, 6 RCs (w/ comparison), 8 conditions
     doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
     keepConditions = true;
     errorType = 'SEM';
@@ -423,44 +429,24 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
 %         tempNoiseStrct1 = aggregateData(pphysRCA(f).comparisonNoiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
 %         tempNoiseStrct2 = aggregateData(pphysRCA(f).comparisonNoiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError);
 %         [snrVals(:,f,6,:),noiseVals(:,f,6,:)] = computeSnr(tempDataStrct,tempNoiseStrct1,tempNoiseStrct2,false);
-
-        rcStruct = aggregateData(pphysRCA(f).data,pphysRCA(f).settings,keepConditions,errorType,trialError,doNR);
-        compStruct = aggregateData(pphysRCA(f).comparisonData,pphysRCA(f).settings,keepConditions,errorType,trialError);
-        % note: no NR fitting on noise data
-        rcNoiseStrct1 = aggregateData(pphysRCA(f).noiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
-        rcNoiseStrct2 = aggregateData(pphysRCA(f).noiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
-        compNoiseStrct1 = aggregateData(pphysRCA(f).comparisonNoiseData.lowerSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
-        compNoiseStrct2 = aggregateData(pphysRCA(f).comparisonNoiseData.higherSideBand,pphysRCA(f).settings,keepConditions,errorType,trialError,[]);
-        % snr
-        [rcSNR,rcNoiseVals] = computeSnr(rcStruct,rcNoiseStrct1,rcNoiseStrct2,false);
-        [compSNR,compNoiseVals] = computeSnr(compStruct,compNoiseStrct1,compNoiseStrct2,false);
-
+        
+        rcStruct = aggregateData(pphysRCA(f),keepConditions,errorType,trialError,doNR);        
         % RC
-        pphysRCA(f).stats.ampVals(:,1:5,:) = rcStruct.ampBins;
-        pphysRCA(f).stats.errLB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,1);
-        pphysRCA(f).stats.errUB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,2);
-        pphysRCA(f).stats.snrVals(:,1:5,:) = rcSNR;
-        pphysRCA(f).stats.noiseVals(:,1:5,:) = rcNoiseVals;
-        pphysRCA(f).stats.NR_pOpt(:,1:5,:) = rcStruct.NakaRushton.pOpt;
-        pphysRCA(f).stats.NR_JKSE(:,1:5,:) = rcStruct.NakaRushton.JKSE;
-        pphysRCA(f).stats.NR_R2(1:5,:) = rcStruct.NakaRushton.R2;
+        pphysRCA(f).stats.Amp = squeeze(rcStruct.ampBins);
+        pphysRCA(f).stats.SubjectAmp = squeeze(rcStruct.subjectAmp);
+        pphysRCA(f).stats.ErrLB = squeeze(rcStruct.ampErrBins(:,:,:,:,1));
+        pphysRCA(f).stats.ErrUB = squeeze(rcStruct.ampErrBins(:,:,:,:,2));
+        pphysRCA(f).stats.NoiseAmp = squeeze(rcStruct.ampNoiseBins);
+        pphysRCA(f).stats.SubjectNoiseAmp = squeeze(rcStruct.subjectAmpNoise);
+        % Naka-Rushton
+        pphysRCA(f).stats.NR_Params = squeeze(rcStruct.NakaRushton.Params);
+        pphysRCA(f).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2);
+        pphysRCA(f).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE);
+        pphysRCA(f).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params);
         pphysRCA(f).stats.hModel = rcStruct.NakaRushton.hModel;
-        pphysRCA(f).stats.tSqrdP(:,1:5,:) = rcStruct.tSqrdP;
-        pphysRCA(f).stats.tSqrdSig(:,1:5,:) = rcStruct.tSqrdSig;
-        pphysRCA(f).stats.tSqrdVal(:,1:5,:) = rcStruct.tSqrdVal;
-
-        % COMPARISON
-        pphysRCA(f).stats.ampVals(:,6,:) = compStruct.ampBins;
-        pphysRCA(f).stats.errLB(:,6,:) = compStruct.ampErrBins(:,:,:,:,1);
-        pphysRCA(f).stats.errUB(:,6,:) = compStruct.ampErrBins(:,:,:,:,2);
-        pphysRCA(f).stats.snrVals(:,6,:) = compSNR;
-        pphysRCA(f).stats.noiseVals(:,6,:) = compNoiseVals;
-        pphysRCA(f).stats.NR_pOpt(:,6,:) = compStruct.NakaRushton.pOpt;
-        pphysRCA(f).stats.NR_JKSE(:,6,:) = compStruct.NakaRushton.JKSE;
-        pphysRCA(f).stats.NR_R2(6,:) = compStruct.NakaRushton.R2;
-        pphysRCA(f).stats.tSqrdP(:,6,:) = compStruct.tSqrdP;
-        pphysRCA(f).stats.tSqrdSig(:,6,:) = compStruct.tSqrdSig;
-        pphysRCA(f).stats.tSqrdVal(:,6,:) = compStruct.tSqrdVal;
+        pphysRCA(f).stats.tSqrdP = squeeze(rcStruct.tSqrdP);
+        pphysRCA(f).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig);
+        pphysRCA(f).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal);
     end
     warning('on','all')
 
@@ -505,10 +491,10 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
         freqFig(f) = figure;
         curFreq = freqsToUse(f);
                         
-        valSet = pphysRCA(curFreq).stats.ampVals;
-        errSet1 = pphysRCA(curFreq).stats.errLB;
-        errSet2 = pphysRCA(curFreq).stats.errUB;
-        NRset = pphysRCA(curFreq).stats.NR_pOpt;
+        valSet = pphysRCA(curFreq).stats.Amp;
+        errSet1 = pphysRCA(curFreq).stats.ErrLB;
+        errSet2 = pphysRCA(curFreq).stats.ErrUB;
+        NRset = pphysRCA(curFreq).stats.NR_Params;
         NRmodel = pphysRCA(curFreq).stats.hModel;
         for r = 1:(nComp+1)
             if r<6
@@ -584,7 +570,7 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                 ylim([0,yMax])
 
                 % plot noise patch
-                meanNoise = max(pphysRCA(curFreq).stats.noiseVals(:,r,curConds),[],3)';
+                meanNoise = max(pphysRCA(curFreq).stats.NoiseAmp(:,r,curConds),[],3)';
                 yNoiseVals = [0,meanNoise(1),meanNoise,meanNoise(end),0]; % start and end points just repeats of first and last
                 xNoiseVals = [xMin,xMin,binVals',xMax,xMax];
                 pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
@@ -656,6 +642,22 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                         rc_tSqrdSig(b,3+(s-1)*3) = tempStrct.H;
                         diffMag(b,s) = tempStrct.testAmp;
                     end
+                    
+                    % make Naka-Rushton values
+                    
+                    NRvals = pphysRCA(curFreq).stats.NR_Params;
+                    NRerrs = pphysRCA(curFreq).stats.NR_JKSE;
+                    NRmodel = pphysRCA(curFreq).stats.hModel;
+        
+                     % do paired tests
+                    testVal = squeeze(pphysRCA(curFreq).stats.NR_JKParams(:,:,rcNum,curConds));
+                    testVal = permute(testVal,[2,1,3]); % move subjects to first dim    
+                    paramIdx = [1,2,3,4];% only look at c50 and rMax
+                    jkDf = size(testVal,1)-1;
+                    diffErr = jackKnifeErr(testVal(:,paramIdx,1)-testVal(:,paramIdx,2));
+                    grandDiff = NRvals(paramIdx,rcNum,curConds(1)) - NRvals(paramIdx,rcNum,curConds(2));
+                    paramPairedT(:,s) = grandDiff'./diffErr;
+                    paramPairedP(:,s) = 2*tcdf( -abs(paramPairedT(:,s)) , jkDf);
                 else
                 end
                 hold off;
@@ -680,6 +682,13 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
         export_fig(sprintf('%s/pphys%0.0f_rc%d_%s.pdf',savePath,expNum,curFreq,rcaType),'-pdf','-transparent',gcf);
     end
     close all;
+    
+    for z=1:4
+        subplot(1,4,z);
+        hold on
+        plot(1:4,squeeze(NRvals(z,1,:)),'o')
+        errorb(1:4,squeeze(NRvals(z,1,:)),squeeze(NRerrs(z,1,:)))
+    end
 
 %% PLOT TASK ILLUSTRATION
 if taskFig
