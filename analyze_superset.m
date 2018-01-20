@@ -23,7 +23,7 @@ if plotSupplemental
     expList = {'exp4','exp5'};
     condsToUse = [4,8];   
 else
-    expList = {'exp1','exp2','exp4','exp8'};
+    expList = {'exp1','exp2','exp3','exp4'};
     condsToUse = [3,7];
 end
 idList = [];
@@ -97,7 +97,7 @@ end
 
 keepConditions = true;
 errorType = 'SEM';
-doNR = false(2,5,2); % 2 freqs, 5 RCs, 2 conditions
+doNR = false(2,6,2); % 2 freqs, 5 RCs, 2 conditions
 doNR(:,1,:) = true; % do fitting for first RC, second and fourth harmonic, all conditions
 for f=1:length(freqsToUse)
     if f == 1
@@ -105,43 +105,21 @@ for f=1:length(freqsToUse)
     else
         idxList = 3:4;
     end
-    rcStruct = aggregateData(superRCA(f).data,superRCA(f).settings,keepConditions,errorType,trialError,doNR);    
-    compStruct = aggregateData(superRCA(f).comparisonData,superRCA(f).settings,keepConditions,errorType,trialError);
-    % note: no NR fitting on noise data
-    rcNoiseStrct1 = aggregateData(superRCA(f).noiseData.lowerSideBand,superRCA(f).settings,keepConditions,errorType,trialError,[]);
-    rcNoiseStrct2 = aggregateData(superRCA(f).noiseData.higherSideBand,superRCA(f).settings,keepConditions,errorType,trialError,[]);
-    compNoiseStrct1 = aggregateData(superRCA(f).comparisonNoiseData.lowerSideBand,superRCA(f).settings,keepConditions,errorType,trialError,[]);
-    compNoiseStrct2 = aggregateData(superRCA(f).comparisonNoiseData.higherSideBand,superRCA(f).settings,keepConditions,errorType,trialError,[]);
-    % snr
-    [rcSNR,rcNoiseVals] = computeSnr(rcStruct,rcNoiseStrct1,rcNoiseStrct2,false);
-    [compSNR,compNoiseVals] = computeSnr(compStruct,compNoiseStrct1,compNoiseStrct2,false);
+    rcStruct = aggregateData(superRCA(f),keepConditions,errorType,trialError,doNR);    
     
     % RC
-    superRCA(f).stats.ampVals(:,1:5,:) = rcStruct.ampBins;
-    superRCA(f).stats.errLB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,1);
-    superRCA(f).stats.errUB(:,1:5,:) = rcStruct.ampErrBins(:,:,:,:,2);
-    superRCA(f).stats.snrVals(:,1:5,:) = rcSNR;
-    superRCA(f).stats.noiseVals(:,1:5,:) = rcNoiseVals;
-    superRCA(f).stats.NR_pOpt(:,1:5,:) = rcStruct.NakaRushton.pOpt;
-    superRCA(f).stats.NR_JKSE(:,1:5,:) = rcStruct.NakaRushton.JKSE;
-    superRCA(f).stats.NR_R2(1:5,:) = rcStruct.NakaRushton.R2;
+    superRCA(f).stats.ampVals = squeeze(rcStruct.ampBins);
+    superRCA(f).stats.errLB = squeeze(rcStruct.ampErrBins(:,:,:,:,1));
+    superRCA(f).stats.errUB = squeeze(rcStruct.ampErrBins(:,:,:,:,2));
+    superRCA(f).stats.noiseVals = squeeze(rcStruct.ampNoiseBins);
+    superRCA(f).stats.NR_pOpt = squeeze(rcStruct.NakaRushton.Params);
+    superRCA(f).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE);
+    superRCA(f).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params);
+    superRCA(f).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2);
     superRCA(f).stats.hModel = rcStruct.NakaRushton.hModel;
-    superRCA(f).stats.tSqrdP(:,1:5,:) = rcStruct.tSqrdP;
-    superRCA(f).stats.tSqrdSig(:,1:5,:) = rcStruct.tSqrdSig;
-    superRCA(f).stats.tSqrdVal(:,1:5,:) = rcStruct.tSqrdVal;
-
-    % COMPARISON
-    superRCA(f).stats.ampVals(:,6,:) = compStruct.ampBins;
-    superRCA(f).stats.errLB(:,6,:) = compStruct.ampErrBins(:,:,:,:,1);
-    superRCA(f).stats.errUB(:,6,:) = compStruct.ampErrBins(:,:,:,:,2);
-    superRCA(f).stats.snrVals(:,6,:) = compSNR;
-    superRCA(f).stats.noiseVals(:,6,:) = compNoiseVals;
-    superRCA(f).stats.NR_pOpt(:,6,:) = compStruct.NakaRushton.pOpt;
-    superRCA(f).stats.NR_JKSE(:,6,:) = compStruct.NakaRushton.JKSE;
-    superRCA(f).stats.NR_R2(6,:) = compStruct.NakaRushton.R2;
-    superRCA(f).stats.tSqrdP(:,6,:) = compStruct.tSqrdP;
-    superRCA(f).stats.tSqrdSig(:,6,:) = compStruct.tSqrdSig;
-    superRCA(f).stats.tSqrdVal(:,6,:) = compStruct.tSqrdVal;
+    superRCA(f).stats.tSqrdP = rcStruct.tSqrdP;
+    superRCA(f).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig);
+    superRCA(f).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal);
 end
 delete(gcp('nocreate'));
 
@@ -157,21 +135,37 @@ mainColors = [cBrewer.rgb20(5,:); cBrewer.rgb20(7,:)];
 topoVals = [superRCA(1).A(:,rcNum);superRCA(2).A(:,rcNum)];
 rcaColorBar = [min(topoVals),max(topoVals)];
 newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
-rcaColorBar = [-newExtreme,newExtreme*1.001];
+%rcaColorBar = [-newExtreme,newExtreme*1.001];
+rcaColorBar = [-0.4,0.4001];
 plotLabel = {'A','B','C','D'};
 if plotSupplemental
     flipIdx = [1,-1];
 else
-    flipIdx = [-1,1];
+    flipIdx = [-1,-1];
 end
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLevels{1});
     valSet = squeeze(superRCA(f).stats.ampVals(:,rcNum,:));
     errSet1 = squeeze(superRCA(f).stats.errLB(:,rcNum,:));
     errSet2 = squeeze(superRCA(f).stats.errUB(:,rcNum,:));
-    NRset = squeeze(superRCA(f).stats.NR_pOpt(:,rcNum,:));
-    NRmodel = superRCA(f).stats.hModel;
     maxNoise = max(superRCA(f).stats.noiseVals(:,rcNum,:),[],3)';
+    
+    % make Naka-Rushton values
+    NRmodel = superRCA(f).stats.hModel;
+    NRset = squeeze(superRCA(f).stats.NR_pOpt(:,rcNum,:));          
+    NRerrs = superRCA(f).stats.NR_JKSE;
+    NRmodel = superRCA(f).stats.hModel;
+
+    % do paired tests
+    testVal = squeeze(superRCA(f).stats.NR_JKParams(:,:,rcNum,:));
+    testVal = permute(testVal,[2,1,3]); % move subjects to first dim    
+    paramIdx = [1,2,3,4];% only look at c50 and rMax
+    jkDf = size(testVal,1)-1;
+    diffErr = jackKnifeErr(testVal(:,paramIdx,1)-testVal(:,paramIdx,2));
+    grandDiff = NRset(paramIdx,1) - NRset(paramIdx,2);
+    paramPairedT(:,f) = grandDiff'./diffErr;
+    paramPairedP(:,f) = 2*tcdf( -abs(paramPairedT(:,f)) , jkDf);
+    
     
     egiH(f) = subplot(2,2,2+(f-1)*2);
     hold on
