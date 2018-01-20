@@ -160,7 +160,7 @@ for e = 1:numExp
                     nFine = 1e2;
                     nrX = linspace( min(binVals), max(binVals), nFine )';
                     nrVals = NRmodel( nrX, NRset(:,rcNum,curConds(c)));
-                    hNR{c} = plot( nrX, nrVals, '-k', 'LineWidth',lWidth);
+                    hNR{c} = plot( nrX, nrVals, '-','color',subColors(curConds(c),:),'LineWidth',lWidth);
                 else
                 end
             end
@@ -401,35 +401,37 @@ for e = 1:numExp
             
             tIdx = [1,2;3,4;1,3;2,4]; % mot ref vs no ref, disp ref vs no ref, relMot vs no relDisp, absMot vs no absDisp
             jkDf = size(testVal,1)-1;
+            paramList = [1,2,3,4];
             for pT=1:length(tIdx) % do four paired tests
                  % only look at c50 and rMax
-                diffErr = jackKnifeErr(testVal(:,[1,3,4],tIdx(pT,1))-testVal(:,[1,3,4],tIdx(pT,2)));
-                grandDiff = NRvals([1,3,4],tIdx(pT,1)) - NRvals([1,3,4],tIdx(pT,2));
+                diffErr = jackKnifeErr(testVal(:,paramList,tIdx(pT,1))-testVal(:,paramList,tIdx(pT,2)));
+                grandDiff = NRvals(paramList,tIdx(pT,1)) - NRvals(paramList,tIdx(pT,2));
                 paramPairedT(:,pT+(s-1)*4,f,e) = grandDiff'./diffErr;
                 paramPairedP(:,pT+(s-1)*4,f,e) = 2*tcdf( -abs(paramPairedT(:,pT+(s-1)*4,f,e)) , jkDf);
+                paramPairedDf(:,pT+(s-1)*4,f,e) = jkDf;
             end
             
             subPlotOrder = [1,2,5,6];
-            paramList = [1,3,4,6];
-            for z = 1:4 % five parameters (including R2)
-                sH(f,e,s) = subplot(4,1,z);
+            paramList = [paramList,6]; % add R2
+            for z = 1:5 % five parameters (including R2)
+                sH(f,e,s) = subplot(5,1,z);
                 hold on
                 xVals = (1:4)+5*(s-1)+10*(e-1);
                 arrayfun(@(x) bar(xVals(x),NRvals(paramList(z),x),'facecolor',subColors(x,:),'edgecolor','none'),1:4,'uni',false);
                 if paramList(z) ~= 6
-                    arrayfun(@(x) ...
-                        ErrorBars(xVals(x),NRvals(paramList(z),x),NRerrors(paramList(z),x),'color',[0,0,0],'type','bar','cap',false,'barwidth',lWidth),...
-                        1:4,'uni',false);
+                    %arrayfun(@(x) ...
+                    %    ErrorBars(xVals(x),NRvals(paramList(z),x),NRerrors(paramList(z),x),'color',[0,0,0],'type','bar','cap',false,'barwidth',lWidth),...
+                    %    1:4,'uni',false);
                 else
                 end
                 if e == numExp
                     switch paramList(z)
                         case 1
-                            ylabel('c50');
-                            yMin = 0; yMax = 15; yUnit = 5;
+                            ylabel('C_5_0');
+                            yMin = 0; yMax = 6; yUnit = 2;
                         case 2
                             ylabel('exponent');
-                            yMin = 0; yMax = 1; yUnit = 1;
+                            yMin = 0; yMax = 6; yUnit = 2;
                         case 3
                             ylabel('rMax');
                             yMin = 0; yMax = 4; yUnit = 1;
@@ -447,16 +449,16 @@ for e = 1:numExp
                     if z == 1
                         set(gca,'YTickLabel',sprintf('%0.0f|',yMin:yUnit:yMax))
                         set(gca,'xtick',[],'ytick',yMin:yUnit:yMax);
-                        arrayfun(@(x) text(5+(x-1)*10,max(get(gca,'ylim')), ...
+                        arrayfun(@(x) text(5+(x-1)*10,max(get(gca,'ylim'))*1.1, ...
                                 [sprintf('Exp. %0.0f: ',adultExp(x)),...
                                 '\it\fontname{Arial}',sprintf('%s',freqName(1:2))],...
                                 'horizontalalignment','center'),...
                                 1:numExp,'uni',false);
                     elseif z == 4
-                        set(gca,'YTickLabel',sprintf('%0.1f|',yMin:yUnit:yMax))
+                        set(gca,'YTickLabel',sprintf('%0.0f|',yMin:yUnit:yMax))
                         set(gca,'xtick',[2.5:5:50],'ytick',yMin:yUnit:yMax,'xticklabel',{'Hori','Vert'},'clipping','off');
                     else
-                        set(gca,'YTickLabel',sprintf('%0.1f|',yMin:yUnit:yMax))
+                        set(gca,'YTickLabel',sprintf('%0.0f|',yMin:yUnit:yMax))
                         set(gca,'xtick',[],'ytick',yMin:yUnit:yMax);
                     end
 
@@ -483,47 +485,57 @@ for f = 1:nFreq
     drawnow;
     set(gcf, 'units', 'centimeters');
     figPos = get(gcf,'pos');
-    figPos(4) = figWidth;
+    figPos(4) = figWidth*(5/4);
     figPos(3) = figHeight;
     set(gcf,'pos',figPos);
     export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_Naka%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
 end
 
-paramNames = {'c50','rMax','b'};
-orientNames = {'H','V'};
-testNames =  {'InRefVsNo', 'AntiRefVsNo', 'RefInVsAnti', 'NoRefInVsAnti'};
+close all;
+%% MAKE TABLES
 
+paramNames = {'c50','exponent','rMax','b','df'};
+orientNames = {'Horizontal','Vertical'};
+testList =  {'In_RefVsNo', 'Anti_RefVsNo', 'Ref_InVsAnti', 'NoRef_InVsAnti','IOVD_InVsAnti'};
+expList =  {'Exp. 1','Exp. 2','Exp. 3','Exp. 4','Exp. 5'};
 % make table of paired results
 freqNum = 2;
-for z = 1:4
+for z = 1:length(testList)
+    switch testList{z}
+        case 'Ref_InVsAnti'
+            expIdx = 1:5;
+            testIdx = 3;
+        case 'IOVD_InVsAnti'
+            expIdx = [4,5];
+            testIdx = 3;
+        case 'NoRef_InVsAnti'
+            expIdx = 2;
+            testIdx = 4;
+        case 'In_RefVsNo'
+            expIdx = 1:3;
+            testIdx = 1;
+        case 'Anti_RefVsNo'
+            expIdx = 1:3;
+            testIdx = 2;
+        otherwise
+    end        
     for s = 1:2
-        curIdx = z+(s-1)*4;
+        testIdx = testIdx+(s-1)*4; % horizontal and vertical
+        curIdx = z+(s-1)*length(testList);
         motion2D3D_stats{curIdx} = table(...
-            [squeeze(paramPairedT(1,curIdx,freqNum,:)), squeeze(paramPairedP(1,curIdx,freqNum,:)),squeeze(paramPairedP(1,curIdx,freqNum,:))<0.05], ...
-            [squeeze(paramPairedT(2,curIdx,freqNum,:)), squeeze(paramPairedP(2,curIdx,freqNum,:)),squeeze(paramPairedP(2,curIdx,freqNum,:))<0.05], ...
-            [squeeze(paramPairedT(3,curIdx,freqNum,:)), squeeze(paramPairedP(3,curIdx,freqNum,:)),squeeze(paramPairedP(3,curIdx,freqNum,:))<0.05] );
-        motion2D3D_stats{curIdx}.Properties.VariableNames = paramNames;
-        motion2D3D_stats{curIdx}.Properties.Description =sprintf('%s:%s',testNames{z},orientNames{s});
+            expList(expIdx)',...
+            [squeeze(paramPairedT(1,testIdx,freqNum,expIdx)), squeeze(paramPairedP(1,testIdx,freqNum,expIdx))], ...
+            [squeeze(paramPairedT(2,testIdx,freqNum,expIdx)), squeeze(paramPairedP(2,testIdx,freqNum,expIdx))], ...
+            [squeeze(paramPairedT(3,testIdx,freqNum,expIdx)), squeeze(paramPairedP(3,testIdx,freqNum,expIdx))], ...
+            [squeeze(paramPairedT(4,testIdx,freqNum,expIdx)), squeeze(paramPairedP(4,testIdx,freqNum,expIdx))],...
+            squeeze(paramPairedDf(1,testIdx,freqNum,expIdx)));
+        motion2D3D_stats{curIdx}.Properties.VariableNames = [orientNames{s},paramNames];
+        motion2D3D_stats{curIdx}.Properties.Description =sprintf('%s:%s',testList{z},orientNames{s});
+        writetable(motion2D3D_stats{curIdx},sprintf('%s/paper_figures/exp1-5/motion2D3D_2F_%s_%0.0f.csv',figFolder,testList{z},s),'WriteRowNames',true);
     end
 end
-close all;
 
-
-    
-    
-    % Get parameter standard errors
-%     if logScale
-%         % put c50 back in original units
-%         pA1(1,:) = 10.^pA1(1,:) / fx;
-%         pA2(1,:) = 10.^pA2(1,:) / fx;
-%         pN( 1,:) = 10.^pN( 1,:) / fx;
-%         pA1jk(1,:) = 10.^pA1jk(1,:) / fx;
-%         pA2jk(1,:) = 10.^pA2jk(1,:) / fx;
-%         pNjk( 1,:) = 10.^pNjk( 1,:) / fx;
-%         fprintf( '\nFIT LOG10( %g * OFFSET )\n', fx )
-%     else
-%         fprintf( '\nFIT LINEAR OFFSET\n' )
-%     end
+   
 
     
 
