@@ -541,7 +541,7 @@ function analyze_pphys(expNum,taskFig,logConvert,rcaType)
                         nFine = 1e2;
                         nrX = linspace( min(binVals), max(binVals), nFine )';
                         nrVals = NRmodel( nrX, NRset(:,r,curConds(c)));
-                        hNR{c} = plot( nrX, nrVals, '-k', 'LineWidth',lWidth);
+                        hNR{c} = plot( nrX, nrVals, '-','color',subColors(curConds(c),:), 'LineWidth',lWidth);
                     else
                     end
                 end

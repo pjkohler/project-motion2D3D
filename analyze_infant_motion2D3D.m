@@ -133,7 +133,7 @@ function analyze_infant_motion2D3D(doFreq)
                     nFine = 1e2;
                     nrX = linspace( min(binVals), max(binVals), nFine )';
                     nrVals = NRmodel( nrX, NRvals(:,nComp(r),curConds(c)));
-                    nR(c) = plot( nrX, nrVals, '-k','LineWidth',lWidth);
+                    nR(c) = plot( nrX, nrVals, '-','color',subColors(curConds(c),:),'LineWidth',lWidth);
 
                 else
                 end
