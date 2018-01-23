@@ -439,19 +439,20 @@ for e = 1:numExp
                 xVals = (1:4)+5*(s-1)+10*(e-1);
                 arrayfun(@(x) bar(xVals(x),NRvals(paramList(z),x),'facecolor',subColors(x,:),'edgecolor','none'),1:4,'uni',false);
                 if paramList(z) ~= 6
-                    %arrayfun(@(x) ...
-                    %    ErrorBars(xVals(x),NRvals(paramList(z),x),NRerrors(paramList(z),x),'color',[0,0,0],'type','bar','cap',false,'barwidth',lWidth),...
-                    %    1:4,'uni',false);
+                    eH = arrayfun(@(x) ...
+                        ErrorBars(xVals(x),NRvals(paramList(z),x),NRerrors(paramList(z),x),'color',[0,0,0],'type','bar','cap',false,'barwidth',lWidth),...
+                        1:4,'uni',false);
+                   cellfun(@(x) set(x{:},'clipping','on'),eH);
                 else
                 end
                 if e == numExp
                     switch paramList(z)
                         case 1
                             ylabel('C_5_0');
-                            yMin = 0; yMax = 6; yUnit = 2;
+                            yMin = 0; yMax = 8; yUnit = 2;
                         case 2
                             ylabel('exponent');
-                            yMin = 0; yMax = 6; yUnit = 2;
+                            yMin = 0; yMax = 8; yUnit = 2;
                         case 3
                             ylabel('rMax');
                             yMin = 0; yMax = 4; yUnit = 1;
