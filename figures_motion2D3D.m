@@ -94,6 +94,9 @@ for e = 1:numExp
         [figH(e,f),cH(e,f)] = mrC.plotOnEgi(readyRCA(curFreq).A(:,rcNum)*flipIdx(f,e),rcaColorBar(:,f),true);
         
         hold off
+        
+        % compute PCA variance explained
+        [ rcaRelExpl(f,e), rcaVarExpl(f,e) ,pcaVarExpl(f,e), pcaEigs(:,f,e) ] = rcaExplained(readyRCA(curFreq),1);
             
         %title(['Full RCA ' num2str(rcNum)],'fontsize',fSize,'fontname','Helvetica');
         for s=1:2 % vertical or horizontal motion
@@ -143,11 +146,6 @@ for e = 1:numExp
                 rc_tSqrdVal(e,f,s) = {cat(1,rc_tSqrdVal{e,f,s},tempT)};
                 clear temp*
             end
-                
-                    
-            
-            
-            %tSquaredFourierCoefs(xyData(~nanVals,:));
             
             for c=1:length(curConds)
                 valH(c)=plot(binVals,valSet(:,rcNum,curConds(c)),'o','MarkerSize',5,'LineWidth',lWidth,'Color',subColors(curConds(c),:),'markerfacecolor',[1,1,1]);
@@ -176,9 +174,6 @@ for e = 1:numExp
                 yUnit = 0.5;
                 yMax = 2;
             end
-
-            %yUnit = floor((ceil(max(valSet(:)))/5)*10)/10;
-            %yMax = ceil(max(valSet(:)))+yUnit;
             set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0.1,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top','clipping','off');
             xlim([xMin,xMax]);
             ylim([0,yMax])
@@ -260,13 +255,38 @@ for f = 1:nFreq
     figPos(3) = figWidth;
     set(gcf,'pos',figPos);
     export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_harm%0.0f.pdf',figFolder,f),'-pdf','-transparent',gcf);
-    
-%     if plotSNR        
-%         
-%     else
-%         export_fig(sprintf('%s/exp%d_rc%d_%s.pdf',saveLocation,doExp,f,plotType),'-pdf','-transparent',gcf);
-%     end
 end
+
+%% MAKE PCA FIGURES
+freqLabels = {'1F','2F','3F','4F'};
+figure;
+for f = 1:2
+    for e = 1:5
+        subplot(5,2,f+(e-1)*2);
+        plot(pcaEigs(1:50,f,e),'-o');
+        title(sprintf('exp %0.0f: %s',e,freqLabels{f}),'fontsize',fSize,'fontname','Helvetica');
+        set(gca,gcaOpts{:});
+        xlim([0.5,50.5]);
+    end
+    if f == 1
+        expIdx = [1,2,4,5]; % exclude no signal experiment 3
+    else
+        expIdx = 1:5;
+    end
+    meanVarExpl(f) = mean(rcaVarExpl(f,expIdx),2);
+    stdVarExpl(f) = std(rcaVarExpl(f,expIdx),0,2);
+    meanRelExpl(f) = mean(rcaRelExpl(f,expIdx),2);
+    stdRelExpl(f) = std(rcaRelExpl(f,expIdx),0,2);
+end
+set(gcf, 'units', 'centimeters');
+figPos = get(gcf,'pos');
+figPos(4) = figHeight;
+figPos(3) = figWidth;
+set(gcf,'pos',figPos);
+export_fig(sprintf('%s/paper_figures/exp1-5/adultExp_pca.pdf',figFolder),'-pdf','-transparent',gcf);
+close gcf;
+
+
 
 %% MAKE STATS FIGURES
 close all;
@@ -413,7 +433,7 @@ for e = 1:numExp
             
             subPlotOrder = [1,2,5,6];
             paramList = [paramList,6]; % add R2
-            for z = 1:5 % five parameters (including R2)
+            for z = 1:length(paramList) % five parameters (including R2)
                 sH(f,e,s) = subplot(5,1,z);
                 hold on
                 xVals = (1:4)+5*(s-1)+10*(e-1);
@@ -454,7 +474,7 @@ for e = 1:numExp
                                 '\it\fontname{Arial}',sprintf('%s',freqName(1:2))],...
                                 'horizontalalignment','center'),...
                                 1:numExp,'uni',false);
-                    elseif z == 4
+                    elseif z == length(paramList)
                         set(gca,'YTickLabel',sprintf('%0.0f|',yMin:yUnit:yMax))
                         set(gca,'xtick',[2.5:5:50],'ytick',yMin:yUnit:yMax,'xticklabel',{'Hori','Vert'},'clipping','off');
                     else
@@ -498,6 +518,14 @@ paramNames = {'c50','exponent','rMax','b','df'};
 orientNames = {'Horizontal','Vertical'};
 testList =  {'In_RefVsNo', 'Anti_RefVsNo', 'Ref_InVsAnti', 'NoRef_InVsAnti','IOVD_InVsAnti'};
 expList =  {'Exp. 1','Exp. 2','Exp. 3','Exp. 4','Exp. 5'};
+
+% convert p-vals to strings
+stringPairedP = arrayfun(@(x) num2str(x,'%0.4f'),paramPairedP,'uni',false);
+stringPairedT = arrayfun(@(x) num2str(x,'%0.4f'),paramPairedT,'uni',false);
+
+sigIdx = cell2mat(arrayfun(@(x) x < 0.001,paramPairedP,'uni',false));
+stringPairedP(sigIdx) = {'<0.001'};
+
 % make table of paired results
 freqNum = 2;
 for z = 1:length(testList)
@@ -507,7 +535,7 @@ for z = 1:length(testList)
             testIdx = 3;
         case 'IOVD_InVsAnti'
             expIdx = [4,5];
-            testIdx = 3;
+            testIdx = 4;
         case 'NoRef_InVsAnti'
             expIdx = 2;
             testIdx = 4;
@@ -524,10 +552,10 @@ for z = 1:length(testList)
         curIdx = z+(s-1)*length(testList);
         motion2D3D_stats{curIdx} = table(...
             expList(expIdx)',...
-            [squeeze(paramPairedT(1,testIdx,freqNum,expIdx)), squeeze(paramPairedP(1,testIdx,freqNum,expIdx))], ...
-            [squeeze(paramPairedT(2,testIdx,freqNum,expIdx)), squeeze(paramPairedP(2,testIdx,freqNum,expIdx))], ...
-            [squeeze(paramPairedT(3,testIdx,freqNum,expIdx)), squeeze(paramPairedP(3,testIdx,freqNum,expIdx))], ...
-            [squeeze(paramPairedT(4,testIdx,freqNum,expIdx)), squeeze(paramPairedP(4,testIdx,freqNum,expIdx))],...
+            [squeeze(stringPairedT(1,testIdx,freqNum,expIdx)), squeeze(stringPairedP(1,testIdx,freqNum,expIdx))], ...
+            [squeeze(stringPairedT(2,testIdx,freqNum,expIdx)), squeeze(stringPairedP(2,testIdx,freqNum,expIdx))], ...
+            [squeeze(stringPairedT(3,testIdx,freqNum,expIdx)), squeeze(stringPairedP(3,testIdx,freqNum,expIdx))], ...
+            [squeeze(stringPairedT(4,testIdx,freqNum,expIdx)), squeeze(stringPairedP(4,testIdx,freqNum,expIdx))],...
             squeeze(paramPairedDf(1,testIdx,freqNum,expIdx)));
         motion2D3D_stats{curIdx}.Properties.VariableNames = [orientNames{s},paramNames];
         motion2D3D_stats{curIdx}.Properties.Description =sprintf('%s:%s',testList{z},orientNames{s});
