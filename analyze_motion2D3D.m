@@ -47,7 +47,7 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
     clear freqRCA;
     keepConditions = true;
     errorType = 'SEM';
-    doNR = false(4,6,8); % 4 freqs, 6 RCs (with comparison), 8 conditions
+    doNR = false(4,8,8); % 4 freqs, 8 RCs (with comparison), 8 conditions
     doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
     condsToUse = 1:8;
     for f=1:6
