@@ -27,8 +27,10 @@ function analyze_infant_motion2D3D(doFreq)
     
     if doFreq == 2
         nComp = 1;   % plot only 1st RC.
+        flipVal = 1;
     elseif doFreq == 1
         nComp = 5;   % plot only 5th RC.
+        flipVal = -1;
     else
         error('freq %0.0f, not sure which RC to plot!',doFreq);
     end
@@ -86,7 +88,7 @@ function analyze_infant_motion2D3D(doFreq)
                 rcaColorBar(:,f) = [min(babyRCA(curFreq).A(:,nComp(r))),max(babyRCA(curFreq).A(:,nComp(r)))];
                 newExtreme = round(max(abs(rcaColorBar(:,f)))*10)./10;
                 rcaColorBar(:,f) = [-newExtreme,newExtreme*1.001];
-                [figH(f),cH(f)] = mrC.plotOnEgi(babyRCA(curFreq).A(:,nComp(r)),rcaColorBar(:,f),true);
+                [figH(f),cH(f)] = mrC.plotOnEgi(babyRCA(curFreq).A(:,nComp(r)).*flipVal,rcaColorBar(:,f),true);
                 hold off
             else
             end
