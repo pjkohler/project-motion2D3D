@@ -448,19 +448,19 @@ for e = 1:numExp
                 if e == numExp
                     switch paramList(z)
                         case 1
-                            ylabel('C_5_0');
+                            ylabel('d_5_0');
                             yMin = 0; yMax = 8; yUnit = 2;
                         case 2
-                            ylabel('exponent');
+                            ylabel('n');
                             yMin = 0; yMax = 8; yUnit = 2;
                         case 3
-                            ylabel('rMax');
+                            ylabel('R_m_a_x');
                             yMin = 0; yMax = 4; yUnit = 1;
                         case 4
-                            ylabel('baseline');
+                            ylabel('b');
                             yMin = 0; yMax = 2; yUnit = 1;
                         case 6
-                            ylabel('R2');
+                            ylabel('R^2');
                             yMin = 0; yMax = 1; yUnit = 0.5;
                         otherwise
                     end
@@ -515,7 +515,7 @@ end
 close all;
 %% MAKE TABLES
 
-paramNames = {'c50','exponent','rMax','b','df'};
+paramNames = {'D50','n','Rmax','b','df'};
 orientNames = {'Horizontal','Vertical'};
 testList =  {'In_RefVsNo', 'Anti_RefVsNo', 'Ref_InVsAnti', 'NoRef_InVsAnti','IOVD_InVsAnti'};
 expList =  {'Exp. 1','Exp. 2','Exp. 3','Exp. 4','Exp. 5'};
