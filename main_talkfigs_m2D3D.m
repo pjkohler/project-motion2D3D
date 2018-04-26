@@ -38,54 +38,11 @@ function analyze_motion2D3D(doExp,trialError,plotType,talkFigs)
     
     saveLocation = sprintf('/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/exp%d',doExp);
     saveFileName = sprintf('%s/rcaData.mat',saveLocation);
-    load(saveFileName,'freqRCA');
-
-    %% COMPUTE VALUES FOR PLOTTING
-    readyRCA = freqRCA;
-    readyRCA(5:8) = freqRCA(5); % repeat fullRCA, this is only done to preserve topographies in the code below
-    readyRCA(9:12) = freqRCA(6); % repeat allRCA, this is only done to preserve topographies in the code below
-    clear freqRCA;
-    keepConditions = true;
-    errorType = 'SEM';
-    doNR = false(4,8,8); % 4 freqs, 8 RCs (with comparison), 8 conditions
-    doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
-    condsToUse = 1:8;
-    for f=1:6
-        fprintf('%d\n',f);
-        if f==6
-            idxList = 9:12;
-        elseif f==5
-            idxList = 5:8;
-        else
-            idxList = f;
-        end
-        rcStruct = aggregateData(readyRCA(f),keepConditions,errorType,trialError,doNR);
-        for i = 1:length(idxList)
-            curIdx = idxList(i);
-            % RC
-            readyRCA(curIdx).stats.Amp = squeeze(rcStruct.ampBins(:,i,:,:));
-            readyRCA(curIdx).stats.SubjectAmp = squeeze(rcStruct.subjectAmp(:,i,:,:,:));
-            readyRCA(curIdx).stats.ErrLB = squeeze(rcStruct.ampErrBins(:,i,:,:,1));
-            readyRCA(curIdx).stats.ErrUB = squeeze(rcStruct.ampErrBins(:,i,:,:,2));
-            readyRCA(curIdx).stats.NoiseAmp = squeeze(rcStruct.ampNoiseBins(:,i,:,:));
-            readyRCA(curIdx).stats.SubjectNoiseAmp = squeeze(rcStruct.subjectAmpNoise(:,i,:,:,:));
-            % Naka-Rushton
-            readyRCA(curIdx).stats.NR_Params = squeeze(rcStruct.NakaRushton.Params(:,i,:,:));
-            readyRCA(curIdx).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2(:,i,:,:));
-            readyRCA(curIdx).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE(:,i,:,:));
-            readyRCA(curIdx).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params(:,:,i,:,:));
-            readyRCA(curIdx).stats.hModel = rcStruct.NakaRushton.hModel;
-            % t-values
-            readyRCA(curIdx).stats.tSqrdP = squeeze(rcStruct.tSqrdP(:,i,:,:));
-            readyRCA(curIdx).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig(:,i,:,:));
-            readyRCA(curIdx).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal(:,i,:,:)); 
-        end
-    end
-    % shut down parallel pool, which was used for fitting Naka-Rushton
-    delete(gcp('nocreate'));
+    load(saveFileName,'readyRCA');
 
     %% PLOT RCs
     close all;
+    condsToUse = 1:8;
     nFreq = length(readyRCA(end).settings.freqsToUse);
     nComp = readyRCA(end).settings.nComp;
     plotSNR = false;

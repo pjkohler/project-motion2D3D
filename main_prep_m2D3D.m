@@ -45,6 +45,7 @@ forceSourceData = false; % generate source data for first instance of rca?
 %% RUN RCA
 for e = 1:length(adultExp)
     doExp = adultExp(e);
+    fprintf('\n ... running exp %0.0f ...\n',doExp);
     saveLocation = sprintf('%s/figures/exp%d',topFolder,doExp);
     if ~exist(saveLocation,'dir')
         mkdir(saveLocation);
@@ -57,67 +58,83 @@ for e = 1:length(adultExp)
         % only run allRCA if doing Experiment 1
         allRCA = rcaSweep(folderNames,binsToUse,freqsToUse,condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,forceSourceData);
         allLocation = saveLocation;
+        rcaH = grabCovFig(gcf);
+        export_fig(sprintf('%s/allRCA_cov.pdf',saveLocation),'-pdf','-transparent',rcaH);
+        close all;
     else
-        % otherwise, just load the data
-        load(sprintf('%s/rcaData.mat',allLocation),'allRCA');
     end
     
     % do full RCA
     fullRCA = rcaSweep(folderNames(subsToUse),binsToUse,freqsToUse,condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle,false);
     rcaH = grabCovFig(gcf);
     export_fig(sprintf('%s/fullRCA_cov.pdf',saveLocation),'-pdf','-transparent',rcaH);
-    
     close all;
+    
     for f=1:length(freqsToUse)
-        freqRCA(f) = rcaSweep(folderNames(subsToUse),binsToUse,freqsToUse(f),condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle);
+        readyRCA(f) = rcaSweep(folderNames(subsToUse),binsToUse,freqsToUse(f),condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,[],rcPlotStyle);
         rcaH = grabCovFig(gcf);
         export_fig(sprintf('%s/freq%dRCA_cov.pdf',saveLocation,f),'-pdf','-transparent',rcaH);
         close all;
     end
-    % absord fullRCA and allRCA in freqRCA
-    freqRCA = [freqRCA,fullRCA];    
-    freqRCA = [freqRCA,allRCA];
-    % only include current subjects from allRCA
-    freqRCA(6).inputData = freqRCA(6).inputData(:,subsToUse);
-
-    % rca replaces NaNs with zeroes, correct this
-    nanDims = [1,2]; % if all time points are zero, or all channels are zero
-    structVars = {'data','noiseData','comparisonData','comparisonNoiseData'};
-    noiseVars = {'lowerSideBand','higherSideBand'};
-    for z=1:length(structVars)
-        if strfind(lower(structVars{z}),'noise')
-            for n = 1:length(noiseVars)
-                for f=1:length(freqsToUse)
-                    if f == 6 % only include current subjects from allRCA
-                        freqRCA(f).(structVars{z}).(noiseVars{n}) = freqRCA(f).(structVars{z}).(noiseVars{n})(:,subsToUse);
-                    else
-                    end
-                    freqRCA(f).(structVars{z}).(noiseVars{n}) = cellfun(@(x) Zero2NaN(x,nanDims),freqRCA(f).(structVars{z}).(noiseVars{n}),'uni',false);
-                end
-            end
-        else
-            for f=1:length(freqsToUse)
-                if f == 6 % only include current subjects from allRCA
-                    freqRCA(f).(structVars{z}) = freqRCA(f).(structVars{z})(:,subsToUse);
-                else
-                end
-                freqRCA(f).(structVars{z}) = cellfun(@(x) Zero2NaN(x,nanDims),freqRCA(f).(structVars{z}),'uni',false);
-            end
-        end
+    % absord fullRCA and allRCA in readyRCA
+    readyRCA = [readyRCA,fullRCA];
+    clear fullRCA;
+    
+    % select subjects from current experiment
+    for f = 1:length(allRCA);
+        fIdx = length(freqsToUse)*2+f;
+        readyRCA(fIdx) = allRCA(f);
+        readyRCA(fIdx).data = allRCA(f).data(:,subsToUse);
+        readyRCA(fIdx).comparisonData = allRCA(f).comparisonData(:,subsToUse);
+        readyRCA(fIdx).inputData = allRCA(f).inputData(:,subsToUse);
+        readyRCA(fIdx).noiseData.lowerSideBand = allRCA(f).noiseData.lowerSideBand(:,subsToUse);
+        readyRCA(fIdx).noiseData.higherSideBand = allRCA(f).noiseData.higherSideBand(:,subsToUse);
+        readyRCA(fIdx).comparisonNoiseData.lowerSideBand = allRCA(f).comparisonNoiseData.lowerSideBand(:,subsToUse);
+        readyRCA(fIdx).comparisonNoiseData.higherSideBand = allRCA(f).comparisonNoiseData.higherSideBand(:,subsToUse);
     end
     
-    % now save the data, seperately for each experiment
+    zeroData = cellfun(@(x) any(x(:)==0), cat(1,readyRCA(:).data));
+    
+    if any(zeroData(:))
+        error('data values exactly zero, this should not happen');
+    else
+    end
+    
+    %% COMPUTE VALUES FOR PLOTTING
+    
+    keepConditions = true;
+    errorType = 'SEM';
+    trialError = false;
+    doNR = false(4,8,8); % 4 freqs, 8 RCs (with comparison), 8 conditions
+    doNR([1,2,4],1,:) = true; % do fitting for first RC, first, second and fourth harmonic, all conditions
+    
+    for f = 1:length(readyRCA)
+        fprintf('\n ... rc no. %0.0f ...\n',f);
+        rcStruct = aggregateData(readyRCA(f),keepConditions,errorType,trialError,doNR);
+        % RC
+        readyRCA(f).stats.Amp = squeeze(rcStruct.ampBins);
+        readyRCA(f).stats.SubjectAmp = squeeze(rcStruct.subjectAmp);
+        readyRCA(f).stats.ErrLB = squeeze(rcStruct.ampErrBins(:,:,:,:,1));
+        readyRCA(f).stats.ErrUB = squeeze(rcStruct.ampErrBins(:,:,:,:,2));
+        readyRCA(f).stats.NoiseAmp = squeeze(rcStruct.ampNoiseBins);
+        readyRCA(f).stats.SubjectNoiseAmp = squeeze(rcStruct.subjectAmpNoise);
+        % Naka-Rushton
+        readyRCA(f).stats.NR_Params = squeeze(rcStruct.NakaRushton.Params);
+        readyRCA(f).stats.NR_R2 = squeeze(rcStruct.NakaRushton.R2);
+        readyRCA(f).stats.NR_JKSE = squeeze(rcStruct.NakaRushton.JackKnife.SE);
+        readyRCA(f).stats.NR_JKParams = squeeze(rcStruct.NakaRushton.JackKnife.Params);
+        readyRCA(f).stats.hModel = rcStruct.NakaRushton.hModel;
+        % t-values
+        readyRCA(f).stats.tSqrdP = squeeze(rcStruct.tSqrdP);
+        readyRCA(f).stats.tSqrdSig = squeeze(rcStruct.tSqrdSig);
+        readyRCA(f).stats.tSqrdVal = squeeze(rcStruct.tSqrdVal);
+    end
+    % shut down parallel pool, which was used for fitting Naka-Rushton
+    delete(gcp('nocreate'));
+    clc;
+    
+    %% SAVE THE DATA, SEPARATELY FOR EACH EXPERIMENT
     saveFileName = sprintf('%s/rcaData',saveLocation);
-    if ~exist([saveFileName,'.mat'], 'file')
-        save(saveFileName,'*ToUse') % create file if it does not exist
-    else
-        save(saveFileName,'*ToUse','-append') % otherwise append
-    end
-    if doExp == 1
-        % save original allRCA struct
-        save(saveFileName,'allRCA','-append');
-    else
-    end
-    save(saveFileName,'freqRCA','-append')
-    clear *RCA;
+    save(saveFileName,'readyRCA')
+    clear readyRCA;
 end
