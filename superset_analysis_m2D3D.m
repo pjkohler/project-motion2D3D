@@ -169,7 +169,7 @@ for f=1:length(freqsToUse)
     noiseImag = cell2mat(permute(noiseImag,[3,2,1]));
     realBinMeanNoise = squeeze(nanmean(noiseReal));
     imagBinMeanNoise = squeeze(nanmean(noiseImag));
-    
+        
     if ~projectedData
         % grab values from data structure
         valSet = squeeze(superRCA(f).stats.Amp(:,rcNum,:));
@@ -193,6 +193,9 @@ for f=1:length(freqsToUse)
             tStruct = tSquaredFourierCoefs(xyBinMean(~nanVals,:));
             rc_tSqrdP(length(binVals)+1,c+(f-1)*3) = tStruct.pVal;
             rc_tSqrdVal(length(binVals)+1,c+(f-1)*3) = tStruct.tSqrd;
+            % note, just using mean df for all values, would need
+            % to be fixed if multi data was ever used seriously
+            rc_tSqrdDF(1:length(binVals)+1,c+(f-1)*3) = tStruct.df2;
         end
     else
         % compute projected vector mean
@@ -223,6 +226,7 @@ for f=1:length(freqsToUse)
         [~,temp_p,~,temp_stats] = ttest(project_amps,0,'alpha',0.05,'dim',1,'tail','right');
         rc_tSqrdP(:,(1:2)+(f-1)*3) = permute(temp_p,[2,3,1]);
         rc_tSqrdVal(:,(1:2)+(f-1)*3) = permute(temp_stats.tstat,[2,3,1]);
+        rc_tSqrdDF(:,(1:2)+(f-1)*3) = permute(temp_stats.df,[2,3,1]);
         clear temp_*;
     end
     
@@ -244,20 +248,22 @@ for f=1:length(freqsToUse)
             rc_tSqrdP(b,3+(f-1)*3) = tempStrct.pVal;
             rc_tSqrdSig(b,3+(f-1)*3) = tempStrct.pVal < 0.05;
             rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tSqrd;
-            rc_tSqrdD(b,1+(f-1)) = tempStrct.mahalanobisD;
-            rc_tSqrdU(b,1+(f-1)) = tempStrct.cohenNonOverlap;
-            rc_tSqrdMu1(b,1+(f-1)) = valSet(b,1);
-            rc_tSqrdMu2(b,1+(f-1)) = valSet(b,2);
+            rc_tSqrdDF(b,3+(f-1)*3) = tempStrct.df2;
+            rc_tSqrdD(b,f) = tempStrct.mahalanobisD;
+            rc_tSqrdU(b,f) = tempStrct.cohenNonOverlap;
+            rc_tSqrdMu1(b,f) = valSet(b,1);
+            rc_tSqrdMu2(b,f) = valSet(b,2);
         else
             curData = squeeze(project_amps(:,b,:));
             not_nan = ~any(isnan(curData),2);
             [rc_tSqrdSig(b,3+(f-1)*3),rc_tSqrdP(b,3+(f-1)*3),~,tempStrct] = ttest(curData(not_nan,1),curData(not_nan,2),'alpha',0.05,'dim',1,'tail','both');
             rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tstat;
-            rc_tSqrdD(b,1+(f-1)) = rc_tSqrdVal(b,3+(f-1)*3)./sqrt(tempStrct.df+1); % Cohen's D
-            OVL = 2*normcdf(-abs(rc_tSqrdD(b,1+(f-1)))/2);
-            rc_tSqrdU(b,1+(f-1)) = 1-OVL/(2-OVL); 
-            rc_tSqrdMu1(b,1+(f-1)) = mean(curData(not_nan,1));
-            rc_tSqrdMu2(b,1+(f-1)) = mean(curData(not_nan,2));
+            rc_tSqrdDF(b,3+(f-1)*3) = tempStrct.df;
+            rc_tSqrdD(b,f) = rc_tSqrdVal(b,3+(f-1)*3)./sqrt(tempStrct.df+1); % Cohen's D
+            OVL = 2*normcdf(-abs(rc_tSqrdD(b,f)/2));
+            rc_tSqrdU(b,f) = 1-OVL/(2-OVL); 
+            rc_tSqrdMu1(b,f) = mean(curData(not_nan,1));
+            rc_tSqrdMu2(b,f) = mean(curData(not_nan,2));
         end
     end
     
@@ -387,20 +393,74 @@ else
     export_fig(sprintf('%s/figure5_combined_%s.pdf',saveFilePath,suffix),'-pdf','-transparent',gcf);
 end
 
-
-%% MAKE TABLE
-if plotSupplemental
-    paperText = 'In 2nd harmonic data from Experiments 4 and 5, ';
+if ~projectedData
+    return
 else
-    paperText = 'In 2nd harmonic data from Experiments 1,2,4 and 8, ';
 end
 
-T = table([rc_tSqrdSig(:,1),rc_tSqrdP(:,1),rc_tSqrdVal(:,1)], ...
-          [rc_tSqrdSig(:,2),rc_tSqrdP(:,2),rc_tSqrdVal(:,2)], ...
-          [rc_tSqrdSig(:,3),rc_tSqrdP(:,3),rc_tSqrdVal(:,3)], ...
-          [rc_tSqrdSig(:,4),rc_tSqrdP(:,4),rc_tSqrdVal(:,4)], ...
-          [rc_tSqrdSig(:,5),rc_tSqrdP(:,5),rc_tSqrdVal(:,5)], ...
-          [rc_tSqrdSig(:,6),rc_tSqrdP(:,6),rc_tSqrdVal(:,6)]);
-T.Properties.VariableNames = {'SecondHori','SecondVert','SecondPaired','FourthHori','FourthVert','FourthPaired'}
+%% MAKE TABLE
+%if plotSupplemental
+%    paperText = 'In 2nd harmonic data from Experiments 4 and 5, ';
+%else
+%    paperText = 'In 2nd harmonic data from Experiments 1,2,4 and 8, ';
+%end
+
+if ~all(rc_tSqrdDF(1,:) == rc_tSqrdDF(1,1))
+    error('different dfs for different tests');
+else
+end
+
+stringPairedP = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdP,'uni',false);
+sigIdx = cell2mat(arrayfun(@(x) x < 0.0001,rc_tSqrdP,'uni',false));
+stringPairedP(sigIdx) = {'<0.0001'};
+stringPairedSig = cell(size(rc_tSqrdSig));
+stringPairedSig(rc_tSqrdSig==1) = {'*'};
+stringPairedSig(rc_tSqrdSig==0) = {'ns'};
+stringPairedT = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdVal,'uni',false);
+stringBinVals = cat(1,arrayfun(@(x) num2str(x,'%0.2f'),binVals,'uni',false),{'n/a'});
+stringPairedD = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdD,'uni',false);
+stringPairedDegFree = arrayfun(@(x) num2str(x,'%0.0f'),min(rc_tSqrdDF'),'uni',false)';
+stringPairedU = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdU,'uni',false);
+stringPairedMu1 = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdMu1,'uni',false);
+stringPairedMu2 = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdMu2,'uni',false);
+
+
+readyArray = [stringBinVals, stringPairedP(:,3),stringPairedT(:,3),stringPairedD(:,1)...
+                stringPairedP(:,6),stringPairedT(:,6),stringPairedD(:,2)]';
+rowLabels = {'disp (arcmins)','2F p','2F t-value','2F Cohen''s D','4th p','4F t-value','4F Cohen''s D'}';
+
+readyArray = cat(2,rowLabels,readyArray);
+
+if plotSupplemental
+    titleStr = 'Exp. 4-5 (IOVD)';
+    tableIdx = 2;
+else
+    titleStr = 'Exp. 1-4 (CDOT+IOVD)';
+    tableIdx = 1;
+end
+
+varLabels = cat(2,{num2str(rc_tSqrdDF(1),'df=%0.0f')},...
+              arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
+              {'ave'});
+titleLabels = cell(size(varLabels));
+titleLabels{1} = titleStr;
+
+readyArray = cat(1,titleLabels,varLabels,readyArray);
+table_file = sprintf('%s/superset_table%0.0f.csv',saveFilePath,tableIdx);
+superTable = array2table(readyArray);
+writetable(superTable,table_file,'WriteRowNames',false,'WriteVariableNames',false);
+
+if exist(sprintf('%s/superset_table1.csv',saveFilePath)) && exist(sprintf('%s/superset_table2.csv',saveFilePath))
+    combined_file = sprintf('%s/superset_combined.csv',saveFilePath);
+    if exist(combined_file,'file')
+        delete(combined_file);
+    else
+    end
+    catCmd{1} = sprintf('cd %s',saveFilePath);
+    catCmd{2} = 'cat superset_table1.csv superset_table2.csv > superset_combined.csv';
+    system(strjoin(catCmd, '; '));
+else
+end
+
 
     

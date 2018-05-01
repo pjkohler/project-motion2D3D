@@ -164,6 +164,9 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
             tStruct = tSquaredFourierCoefs(xyBinMean(~nanVals,:));
             rc_tSqrdP(c,length(binVals)+1) = tStruct.pVal;
             rc_tSqrdVal(c,length(binVals)+1) = tStruct.tSqrd;
+            % note, just using mean df for all values, would need
+            % to be fixed if multi data was ever used seriously
+            rc_tSqrdDF(c,1:length(binVals)+1) = tStruct.df2;
         end
     else
         % compute projected vector mean
@@ -195,6 +198,7 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
         [~,temp_p,~,temp_stats] = ttest(project_amps,0,'alpha',0.05,'dim',1,'tail','right');
         rc_tSqrdP = permute(temp_p,[3,2,1]);
         rc_tSqrdVal = permute(temp_stats.tstat,[3,2,1]);
+        rc_tSqrdDF = permute(temp_stats.df,[3,2,1]);
         clear temp_*;
     end
     % maximum noise across all four conditions being plotted
@@ -234,6 +238,7 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
                 tempU(:,b) = tempStrct.cohenNonOverlap;
                 tempMu1(:,b) = valSet(b,tIdx(pT,1));
                 tempMu2(:,b) = valSet(b,tIdx(pT,2));
+                tempDF(:,b) = tempStrct.df2;
             else
                 curData = squeeze(project_amps(:,b,tIdx(pT,:)));
                 not_nan = ~any(isnan(curData),2);
@@ -244,22 +249,24 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
                 tempU(:,b) = 1-OVL/(2-OVL);
                 tempMu1(:,b) = mean(curData(not_nan,1));
                 tempMu2(:,b) = mean(curData(not_nan,2));
+                tempDF(:,b) = tempStrct.df;
                 %tempMu1(:,b) = project_valSet(b,tIdx(pT,1));
                 %tempMu2(:,b) = project_valSet(b,tIdx(pT,2));
             end
         end
-        rc_tSqrdP = {cat(1,rc_tSqrdP,tempP)};
-        rc_tSqrdVal = {cat(1,rc_tSqrdVal,tempT)};
+        rc_tSqrdP = cat(1,rc_tSqrdP,tempP);
+        rc_tSqrdVal = cat(1,rc_tSqrdVal,tempT);
+        rc_tSqrdDF = cat(1,rc_tSqrdDF,tempDF);
         if pT == 1
-            rc_tSqrdD = {tempD};
-            rc_tSqrdU = {tempU};
-            rc_tSqrdMu1 = {tempMu1};
-            rc_tSqrdMu2 = {tempMu2};
+            rc_tSqrdD = tempD;
+            rc_tSqrdU = tempU;
+            rc_tSqrdMu1 = tempMu1;
+            rc_tSqrdMu2 = tempMu2;
         else
-            rc_tSqrdD = {cat(1,rc_tSqrdD,tempD)};
-            rc_tSqrdU = {cat(1,rc_tSqrdU,tempU)};
-            rc_tSqrdMu1 = {cat(1,rc_tSqrdMu1,tempMu1)};
-            rc_tSqrdMu2 = {cat(1,rc_tSqrdMu2,tempMu2)};
+            rc_tSqrdD = cat(1,rc_tSqrdD,tempD);
+            rc_tSqrdU = cat(1,rc_tSqrdU,tempU);
+            rc_tSqrdMu1 = cat(1,rc_tSqrdMu1,tempMu1);
+            rc_tSqrdMu2 = cat(1,rc_tSqrdMu2,tempMu2);
         end
         clear temp*
     end
@@ -364,4 +371,72 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
         hold off
         xlim([0.5,4.5]);
     end
+    
+    if ~projectedData || doFreq ~= 2
+        return
+    else
+    end
+    %% MAKE BIN-BY-BIN TABLE
+    
+    dfTest = repmat(rc_tSqrdDF(:,1),1,size(rc_tSqrdDF,2))==rc_tSqrdDF;
+    if ~all(dfTest(:));
+        msg = '\n df differs among bins \n';
+        error(msg);
+    else
+    end
+    
+    testList =  {'In_RefVsNo', 'Anti_RefVsNo', 'Ref_InVsAnti', 'NoRef_InVsAnti'};
+    % make table of paired results
+    freqNum = 2;
+    finishedArray = [];
+    for z = 1:length(testList)
+        switch testList{z}
+            case 'Ref_InVsAnti'
+                testIdx = 3;
+                testName = 'Ref: In vs Anti';
+            case 'NoRef_InVsAnti'
+                testIdx = 4;
+                testName = 'UnRef: In vs Anti';
+            case 'In_RefVsNo'
+                testIdx = 1;
+                testName = 'In-phase: Ref';
+            case 'Anti_RefVsNo'
+                testIdx = 2;
+                testName = 'Anti-phase: Ref';
+            otherwise
+        end 
+        stringBinVals = cat(1,arrayfun(@(x) num2str(x,'%0.2f'),binVals,'uni',false),{'n/a'});
+        
+        numBinP = rc_tSqrdP(4+testIdx,:);
+        stringBinP = arrayfun(@(x) num2str(x,'%0.4f'), numBinP,'uni',false);
+        sigIdx = cell2mat(arrayfun(@(x) x < 0.0001,numBinP,'uni',false));
+        stringBinP(sigIdx) = {'<0.0001'};
+        numBinT = rc_tSqrdVal(4+testIdx,:);    
+        stringBinT = arrayfun(@(x) num2str(x,'%0.4f'), numBinT,'uni',false);
+        numBinD = rc_tSqrdD(testIdx,:);    
+        stringBinD = arrayfun(@(x) num2str(x,'%0.4f'), numBinD,'uni',false);
+            
+        numBinMu1 = rc_tSqrdMu1(testIdx,:);  
+        stringBinMu1 = arrayfun(@(x) num2str(x,'%0.4f'), numBinMu1,'uni',false);
+        numBinMu2 = rc_tSqrdMu2(testIdx,:); 
+        stringBinMu2 = arrayfun(@(x) num2str(x,'%0.4f'), numBinMu2,'uni',false);            
+        rowLabels = {'disp (arcmins)'};
+        readyArray = [stringBinVals'; stringBinP; stringBinT; stringBinD];
+        
+        rowLabels = {rowLabels{:},'p','t-statistic','Cohen''s D'};
+        readyArray = cat(2,rowLabels',readyArray);
+        varLabels = cat(2,{sprintf('%s (df=%0.0f)',testName,rc_tSqrdDF(4+testIdx,end))},...
+              arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
+              {'ave'});
+        readyArray = cat(1,varLabels,readyArray);
+        finishedArray = cat(1,finishedArray,readyArray);
+    end
+    
+    infant_file = sprintf('%s/2DInfant_%dF1_proj_%s.csv',figureFolder,freqsToUse(doFreq),rcaType);
+    if exist(infant_file,'file')
+        delete(infant_file);
+    else
+    end
+    binTable = array2table(finishedArray);
+    writetable(binTable,infant_file,'WriteRowNames',false,'WriteVariableNames',false);
 end

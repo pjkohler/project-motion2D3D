@@ -176,6 +176,9 @@ for e = 1:numExp
                     tStruct = tSquaredFourierCoefs(xyBinMean(~nanVals,:));
                     rc_tSqrdP{e,f,s}(c,length(binVals)+1) = tStruct.pVal;
                     rc_tSqrdVal{e,f,s}(c,length(binVals)+1) = tStruct.tSqrd;
+                    % note, just using mean df for all values, would need
+                    % to be fixed if multi data was ever used seriously
+                    rc_tSqrdDF{e,f,s}(c,1:length(binVals)+1) = tStruct.df2;
                 end
             else
                 % compute projected vector mean
@@ -207,6 +210,7 @@ for e = 1:numExp
                 [~,temp_p,~,temp_stats] = ttest(project_amps,0,'alpha',0.05,'dim',1,'tail','right');
                 rc_tSqrdP{e,f,s} = permute(temp_p,[3,2,1]);
                 rc_tSqrdVal{e,f,s} = permute(temp_stats.tstat,[3,2,1]);
+                rc_tSqrdDF{e,f,s} = permute(temp_stats.df,[3,2,1]);
                 clear temp_*;
             end
             % maximum noise across all four conditions being plotted
@@ -233,6 +237,7 @@ for e = 1:numExp
                         tempU(:,b) = tempStrct.cohenNonOverlap;
                         tempMu1(:,b) = valSet(b,tIdx(pT,1));
                         tempMu2(:,b) = valSet(b,tIdx(pT,2));
+                        tempDF(:,b) = tempStrct.df2;
                     else
                         curData = squeeze(project_amps(:,b,tIdx(pT,:)));
                         not_nan = ~any(isnan(curData),2);
@@ -243,12 +248,14 @@ for e = 1:numExp
                         tempU(:,b) = 1-OVL/(2-OVL); 
                         tempMu1(:,b) = mean(curData(not_nan,1));
                         tempMu2(:,b) = mean(curData(not_nan,2));
+                        tempDF(:,b) = tempStrct.df;
                         %tempMu1(:,b) = project_valSet(b,tIdx(pT,1));
                         %tempMu2(:,b) = project_valSet(b,tIdx(pT,2));
                     end
                 end
                 rc_tSqrdP(e,f,s) = {cat(1,rc_tSqrdP{e,f,s},tempP)};
                 rc_tSqrdVal(e,f,s) = {cat(1,rc_tSqrdVal{e,f,s},tempT)};
+                rc_tSqrdDF(e,f,s) = {cat(1,rc_tSqrdDF{e,f,s},tempDF)};
                 if pT == 1
                     rc_tSqrdD(e,f,s) = {tempD};
                     rc_tSqrdU(e,f,s) = {tempU};
@@ -307,10 +314,14 @@ for e = 1:numExp
             pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
             uistack(pH,'bottom')
             
-            degFree(e,f) = size(readyRCA(curFreq).data,2);
             text(0.2,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,figLabel{e+(s-1)*5},'fontsize',fSize*1.5,'fontname','Helvetica');
             text(0.45,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.05,sprintf('Exp. %0.0f',adultExp(e)),'fontsize',fSize,'fontname','Helvetica');
-            text(0.45,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.18,sprintf('n = %0d',degFree(e,f)),'fontsize',fSize,'fontname','Helvetica');
+            if projectedData
+                numSubs = rc_tSqrdDF{e,f,s}(1,end) + 1;
+            else
+                numSubs = rc_tSqrdDF{e,f,s}(1,end) + 2;
+            end
+            text(0.45,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.18,sprintf('n = %0d',numSubs),'fontsize',fSize,'fontname','Helvetica');
             
             if e==1
                 title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
@@ -905,6 +916,73 @@ for z = 1:length(testList)
     system(strjoin(catCmd, '; '));
 end
 
+%% MAKE BIN-BY-BIN TABLE
+
+dfTest = cellfun(@(x) all(x(:,end) == x(1,1)), rc_tSqrdDF);
+
+if ~all(dfTest(:))
+    error('different dfs for different tests');
+else
+end
+
+% make table of paired results
+freqNum = 2;
+for z = 1:length(testList)
+    switch testList{z}
+        case 'Ref_InVsAnti'
+            expIdx = 1:5;
+            testIdx = 3;
+        case 'IOVD_InVsAnti'
+            expIdx = [4,5];
+            testIdx = 4;
+        case 'NoRef_InVsAnti'
+            expIdx = 2;
+            testIdx = 4;
+        case 'In_RefVsNo'
+            expIdx = 1:3;
+            testIdx = 1;
+        case 'Anti_RefVsNo'
+            expIdx = 1:3;
+            testIdx = 2;
+        otherwise
+    end 
+    finishedArray = [];
+    stringBinVals = cat(1,arrayfun(@(x) num2str(x,'%0.2f'),binVals,'uni',false),{'n/a'});
+    for s = 1:2
+        numBinP = cell2mat(cellfun(@(x) x(4+testIdx,:),rc_tSqrdP(expIdx,freqNum,s),'uni',false));
+        stringBinP = arrayfun(@(x) num2str(x,'%0.4f'), numBinP,'uni',false);
+        sigIdx = cell2mat(arrayfun(@(x) x < 0.0001,numBinP,'uni',false));
+        stringBinP(sigIdx) = {'<0.0001'};
+        numBinT = cell2mat(cellfun(@(x) x(4+testIdx,:),rc_tSqrdVal(expIdx,freqNum,s),'uni',false));
+        stringBinT = arrayfun(@(x) num2str(x,'%0.4f'), numBinT,'uni',false);
+        numBinD = cell2mat(cellfun(@(x) x(testIdx,:),rc_tSqrdD(expIdx,freqNum,s),'uni',false));
+        stringBinD = arrayfun(@(x) num2str(x,'%0.4f'), numBinD,'uni',false);
+        numBinMu1 = cell2mat(cellfun(@(x) x(testIdx,:),rc_tSqrdMu1(expIdx,freqNum,s),'uni',false));
+        stringBinMu1 = arrayfun(@(x) num2str(x,'%0.4f'), numBinMu1,'uni',false);
+        numBinMu2 = cell2mat(cellfun(@(x) x(testIdx,:),rc_tSqrdMu2(expIdx,freqNum,s),'uni',false));
+        stringBinMu2 = arrayfun(@(x) num2str(x,'%0.4f'), numBinMu2,'uni',false);
+        readyArray = stringBinVals';
+        rowLabels = {'disp (arcmins)'};
+        for q = 1:length(expIdx)
+            readyArray = [readyArray; stringBinP(q,:); stringBinT(q,:); stringBinD(q,:)];
+            rowLabels = {rowLabels{:},num2str(expIdx(q),'Exp. %0.0f p'),num2str(expIdx(q),'Exp %0.0f t-statistic'),num2str(expIdx(q),'Exp %0.0f Cohen''s D')};
+        end
+        readyArray = cat(2,rowLabels',readyArray);
+        varLabels = cat(2,{sprintf('%s (df=%0.0f)',orientNames{s},rc_tSqrdDF{1}(1,end))},...
+              arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
+              {'ave'});
+        readyArray = cat(1,varLabels,readyArray);
+        finishedArray = cat(1,finishedArray,readyArray);
+    end
+    combined_bin_file= sprintf('%s/paper_figures/exp1-5/bin_tables/bin_tTest2D3D_2F_%s_combined.csv',...
+        figFolder,testList{z});
+    if exist(combined_bin_file,'file')
+        delete(combined_bin_file);
+    else
+    end
+    binTable = array2table(finishedArray);
+    writetable(binTable,combined_bin_file,'WriteRowNames',false,'WriteVariableNames',false);
+end
    
 
     
