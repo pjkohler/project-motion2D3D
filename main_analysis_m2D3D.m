@@ -34,7 +34,7 @@ numExp = length(adultExp);
 rcNum = 1;
 figLabel = {'A','B','C','D','E','F','G','H','I','J'};
 flipIdx = [1,-1,1,1,1;
-           -1,-1,1,1,1;
+           -1,-1,-1,-1,1;
            -1,-1,1,1,-1;
            -1,-1,-1,-1,-1];
 
@@ -495,13 +495,77 @@ for f = 1:nFreq
     end 
 end
 toc
-close all
 
 if ~strcmp(plotType,'freq')
     % stop here, don't do stats
     return
 else
 end
+
+%% MAKE TALK FIGURES
+for f = 1:nFreq
+    figure(sweepFig(f));
+    for e = 1:numExp
+        if e < 4
+            subColors = mainColors(1:4,:);
+            deleteOrder = [4,2,3,1];
+        else
+            subColors = alternaColors(1:4,:);
+            deleteOrder = [3,1,4,2];
+        end
+        for s = 1:2
+            subplot(numExp,2,s+(e-1)*2);
+            subAx = gca;
+            newFig = figure;
+            newAx = gca;
+            subH = get(subAx,'children'); %get handle to all the children in the figure
+            copyobj(subH,gca); %copy children to new parent axes i.e. the subplot axes
+            textH = findall(gca,'type','text');
+            for t= 1:length(textH)
+                if length(get(textH(t),'string')) == 1 
+                    delete(textH(t));
+                else
+                end
+            end
+            copySettings = {'xlim','ylim','xscale','yscale','xtick','ytick','xminortick','yticklabel','fontsize','fontname','linewidth','box','ticklength','tickdir'};
+            cellfun(@(x) set(gca,x,get(subAx,x)), copySettings,'uni',false)
+            ylabel('amplitude (\muV)')
+            xlabel('displacement (arcmins)');
+            set(newFig,'units','centimeter');
+            figPos = get(newFig,'pos');
+            figPos(3) = sweepW/2;
+            figPos(4) = sweepH/5;
+            set(newFig,'position',figPos);
+            for c = 1:5
+                if c == 1
+                    deleteColors = [];
+                else
+                    deleteColors = subColors(deleteOrder(c-1),:);
+                end
+                if ~isempty(deleteColors)
+                    lineObjs = findobj(gca, 'type', 'line');
+                    deleteIdx = arrayfun(@(x) ismember(get(x,'color'),deleteColors,'rows'),lineObjs);
+                    delete(lineObjs(deleteIdx))
+                end
+                saveLocation = sprintf('/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/exp%d',e);
+                if ~exist(sprintf('%s/exp%d_talkFigures',saveLocation,e),'dir')
+                    mkdir(sprintf('%s/exp%d_talkFigures',saveLocation,e));
+                else
+                end
+                if s == 1
+                    export_fig(sprintf('%s/exp%d_talkFigures/exp%d_harm%0.0f_%s_hori%0.0f.pdf',saveLocation,e,e,f,plotType,(5-c)+1),'-pdf','-transparent',newFig);
+                else
+                    export_fig(sprintf('%s/exp%d_talkFigures/exp%d_harm%0.0f_%s_vert%0.0f.pdf',saveLocation,e,e,f,plotType,(5-c)+1),'-pdf','-transparent',newFig);
+                end
+            end
+            close(newFig);
+        end
+    end
+end
+
+
+close all
+
 
 %% MAKE ELLIPSE FIGURES
 if ~projectedData
