@@ -243,7 +243,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     hold off
     xlim([.5,8.5]);
     ylim([yMin,yMax]);
-    ylabel('Displacement (arcmins)','fontsize',fSize,'fontname','Arial')
+    ylabel('displacement (arcmins)','fontsize',fSize,'fontname','Arial')
     subplot(1,2,2);
     hold on
     for z = 1:4
@@ -256,7 +256,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     errorb(1:4,bothGrand,bothStderr,'barwidth',.5,'linewidth',lWidth);
     xlim([.5,4.5]);
     ylim([yMin,yMax]);
-    set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+    set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
     %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
     %legend boxoff;
     hold off
@@ -265,7 +265,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     figPos(4) = 6;
     figPos(3) = 18;
     set(gcf,'pos',figPos);
-    ylabel('Displacement (arcmins)','fontsize',fSize,'fontname','Arial');
+    ylabel('displacement (arcmins)','fontsize',fSize,'fontname','Arial');
 
     export_fig(sprintf('%s/pphys%0.0f_beh.pdf',savePath,expNum),'-pdf','-transparent',pphysFig);
     savefig(gcf,sprintf('%s/pphys%0.0f_beh.fig',savePath,expNum)); 
@@ -339,7 +339,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     end
     
     %% CHECK FREQUENCY AND BIN INDICES FOR CONSISTENCY ACROSS SUBS
-    nSubs = size(sensorData,3);
+    nSubs = size(sensorData,2);
     for s=1:nSubs
         for c = 1:length(conditions)
             if sum(abs(subFreqIdx{s}{c}-subFreqIdx{1}{c}))~=0 && sum(abs(subBinIdx{s}{c}-subBinIdx{1}{c}))~=0
@@ -632,9 +632,9 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         legend(valH,{'in-phase','anti-phase'},'fontsize',fSize,'fontname','Helvetica','location','northwest');
         legend boxoff
         if s == 1
-            title('Horizontal','fontsize',fSize,'fontname','Helvetica')
+            title('horizontal','fontsize',fSize,'fontname','Helvetica')
         else
-            title('Vertical','fontsize',fSize,'fontname','Helvetica')
+            title('vertical','fontsize',fSize,'fontname','Helvetica')
         end
         
         set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
@@ -707,13 +707,13 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     
     for s = 1:2
         if s == 1
-            varLabels = cat(2,{num2str(rc_tSqrdDF(1),'Horizontal (df=%0.0f)')},...
+            varLabels = cat(2,{num2str(rc_tSqrdDF(1),'horizontal (df=%0.0f)')},...
                   arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
                   {'ave'});
             readyArray = [stringBinVals, stringPairedP(:,s*3),stringPairedT(:,s*3),stringPairedD(:,s)]';
             rowLabels = {'disp (arcmins)','p','t-statistic','Cohen''s D'}';
         else
-            varLabels = cat(2,{num2str(rc_tSqrdDF(1),'Vertical (df=%0.0f)')},...
+            varLabels = cat(2,{num2str(rc_tSqrdDF(1),'vertical (df=%0.0f)')},...
                   arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
                   {'ave'});
             readyArray = [stringBinVals, stringPairedP(:,s*3),stringPairedT(:,s*3),stringPairedD(:,s)]';
@@ -800,20 +800,20 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         switch z
             case 1
                 plotLabel = 'A';
-                title('Horizontal','fontsize',fSize,'fontname','Helvetica')
+                title('horizontal','fontsize',fSize,'fontname','Helvetica')
                 text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
             case 2
                 plotLabel = 'B';
-                title('Vertical','fontsize',fSize,'fontname','Helvetica')
+                title('vertical','fontsize',fSize,'fontname','Helvetica')
                 text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
             case 3
                 plotLabel = 'D';
-                title('Horizontal','fontsize',fSize,'fontname','Helvetica')
+                title('horizontal','fontsize',fSize,'fontname','Helvetica')
                 ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
                 xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
                 text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             case 4
-                title('Vertical','fontsize',fSize,'fontname','Helvetica')
+                title('vertical','fontsize',fSize,'fontname','Helvetica')
                 plotLabel = 'E';
                 text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             otherwise
@@ -840,7 +840,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
                 ylabel('threshold (arcmins)','fontsize',fSize,'fontname','Helvetica')
                 xlim([.5,4.5]);
                 ylim([yMin,yMax]);
-                set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+                set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
                  if q == 1
                     title('reference','fontsize',fSize,'fontname','Helvetica');
                     newAx = axes('position',get(gca,'position'));
