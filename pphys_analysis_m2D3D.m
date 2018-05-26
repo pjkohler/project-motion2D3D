@@ -36,11 +36,6 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     
     %% add paths
     close all;
-    codeFolder = '/Users/kohler/code';
-    rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
-    addpath(genpath(rcaCodePath));
-    addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
-    addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
     setenv('DYLD_LIBRARY_PATH','')
 
     %% PRELIMINARY
@@ -238,7 +233,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         end
     end
     errorb(1:8,stimGrand,stimStderr);
-    set(gca,gcaOpts{:},'xtick',[2.5,6.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
+    set(gca,gcaOpts{:},'xtick',[2.5,6.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
     
     %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
     %legend boxoff;
@@ -806,21 +801,21 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
             case 1
                 plotLabel = 'A';
                 title('Horizontal','fontsize',fSize,'fontname','Helvetica')
-                text(xText(2),yText(2),'Reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
             case 2
                 plotLabel = 'B';
                 title('Vertical','fontsize',fSize,'fontname','Helvetica')
-                text(xText(2),yText(2),'Reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
             case 3
                 plotLabel = 'D';
                 title('Horizontal','fontsize',fSize,'fontname','Helvetica')
                 ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
                 xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
-                text(xText(2),yText(2),'No reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             case 4
                 title('Vertical','fontsize',fSize,'fontname','Helvetica')
                 plotLabel = 'E';
-                text(xText(2),yText(2),'No reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             otherwise
         end
         
@@ -847,12 +842,12 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
                 ylim([yMin,yMax]);
                 set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'Horizontal','Vertical'},logOpts{:});
                  if q == 1
-                    title('Reference','fontsize',fSize,'fontname','Helvetica');
+                    title('reference','fontsize',fSize,'fontname','Helvetica');
                     newAx = axes('position',get(gca,'position'));
                     text(xText(1),yText(1),'C','fontsize',fSize*2,'fontname','Helvetica');
                     set(newAx,'visible','off');
                 else
-                    title('No reference','fontsize',fSize,'fontname','Helvetica');
+                    title('no reference','fontsize',fSize,'fontname','Helvetica');
                     newAx = axes('position',get(gca,'position'));
                     text(xText(1),yText(1),'F','fontsize',fSize*2,'fontname','Helvetica');
                     set(newAx,'visible','off');
