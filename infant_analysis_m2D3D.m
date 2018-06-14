@@ -1,15 +1,6 @@
 function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
     %% Add Paths
     close all;
-
-    codeFolder = '/Users/kohler/code';
-    if exist(codeFolder,'dir')
-        rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
-        addpath(genpath(rcaCodePath));
-        addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
-        addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
-    else
-    end
     setenv('DYLD_LIBRARY_PATH','')
 
     
@@ -42,8 +33,8 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
             plotComp = 1;   % plot only 1st RC.
             flipVal = 1;
         elseif doFreq == 1
-            plotComp = 5;   % plot only 5th RC.
-            flipVal = -1;
+            plotComp = 5;   % plot only 3rd RC.
+            flipVal = 1;
         else
             error('freq %0.0f, not sure which RC to plot!',doFreq);
         end
@@ -293,8 +284,8 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
         yUnit = 2;
         yMax = 12.0;
     else
-        yUnit = 1;
-        yMax = 6;
+        yUnit = .5;
+        yMax = 3;
     end
     set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[2,4,8,16,32],'ytick',0:yUnit:yMax,'Layer','top','clipping','off', 'color','none');
     set(gca,'XMinorTick','off');

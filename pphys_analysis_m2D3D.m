@@ -201,6 +201,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         [pphysTest(z).Sig, pphysTest(z).P,ci,testStrct] = ttest(testData(z+(z-1),:),testData(z+z,:),'dim',2,'tail','both');
         pphysTest(z).df = testStrct.df;
         pphysTest(z).tstat = testStrct.tstat;
+        pphysTest(z).D = pphysTest(z).tstat./sqrt(testStrct.df+1);
         factorDiff(z) = exp(bothGrand(z+z))/exp(bothGrand(z+(z-1)));
     end
    
@@ -232,7 +233,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
             h3D = bar(z,stimGrand(z),'facecolor',color2(expNum,:),'edgecolor','none','basevalue',baseVal);
         end
     end
-    errorb(1:8,stimGrand,stimStderr);
+    errorb(1:8,stimGrand,stimStderr,'barwidth',.75,'linewidth',lWidth);
     set(gca,gcaOpts{:},'xtick',[2.5,6.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
     
     %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
@@ -253,7 +254,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
             h3D = bar(z,bothGrand(z),'facecolor',color2(expNum,:),'edgecolor','none','basevalue',baseVal);
         end
     end
-    errorb(1:4,bothGrand,bothStderr,'barwidth',.5,'linewidth',lWidth);
+    errorb(1:4,bothGrand,bothStderr,'barwidth',.75,'linewidth',lWidth);
     xlim([.5,4.5]);
     ylim([yMin,yMax]);
     set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
@@ -801,11 +802,11 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
             case 1
                 plotLabel = 'A';
                 title('horizontal','fontsize',fSize,'fontname','Helvetica')
-                text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'full reference','fontsize',fSize,'fontname','Helvetica')
             case 2
                 plotLabel = 'B';
                 title('vertical','fontsize',fSize,'fontname','Helvetica')
-                text(xText(2),yText(2),'reference','fontsize',fSize,'fontname','Helvetica')
+                text(xText(2),yText(2),'full reference','fontsize',fSize,'fontname','Helvetica')
             case 3
                 plotLabel = 'D';
                 title('horizontal','fontsize',fSize,'fontname','Helvetica')
@@ -842,7 +843,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
                 ylim([yMin,yMax]);
                 set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
                  if q == 1
-                    title('reference','fontsize',fSize,'fontname','Helvetica');
+                    title('full reference','fontsize',fSize,'fontname','Helvetica');
                     newAx = axes('position',get(gca,'position'));
                     text(xText(1),yText(1),'C','fontsize',fSize*2,'fontname','Helvetica');
                     set(newAx,'visible','off');

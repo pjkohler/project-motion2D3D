@@ -133,9 +133,9 @@ newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
 rcaColorBar = [-0.4,0.4001];
 plotLabel = {'A','B','C','D'};
 if plotSupplemental
-    flipIdx = [1,-1];
+    flipIdx = [1,1];
 else
-    flipIdx = [-1,-1];
+    flipIdx = [1,1];
 end
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLabels);
@@ -313,14 +313,16 @@ for f=1:length(freqsToUse)
         yMax = 5;
         legend(valH,{'horizontal','vertical'},'fontsize',fSize,'fontname','Helvetica','location','northwest');
         legend boxoff
-        title('Second Harmonic','fontsize',fSize,'fontname','Helvetica')
+        titleStr = '\it\fontname{Arial}2F';
+        title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
     else
         yUnit = 0.5;
         yMin = 0;
         yMax = 1.5;
         ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
         xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
-        title('Fourth Harmonic','fontsize',fSize,'fontname','Helvetica')
+        titleStr = '\it\fontname{Arial}4F';
+        title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
     end
     set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
           

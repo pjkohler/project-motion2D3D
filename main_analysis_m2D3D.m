@@ -36,7 +36,7 @@ figLabel = {'A','B','C','D','E','F','G','H','I','J'};
 flipIdx = [1,-1,1,1,1;
            -1,-1,-1,-1,1;
            -1,-1,1,1,-1;
-           -1,-1,-1,-1,-1];
+           1,1,1,1,1];
 
 % topo stuff
 freqLabels = {'1F','2F','3F','4F'};
@@ -406,12 +406,12 @@ for e = 1:numExp
                 patchX = [0,1/3,1/3,0];
                 patchY = [0 0 patchH patchH];
                 textX = [1/6,1/2,5/6];
-                textStr = {['100% Corr', char(10), '100% Coh'],...
-                           ['0% Corr', char(10), '100% Coh'],...
-                           ['-100% Corr', char(10), ' 100% Coh'],...
-                           ['100% Corr', char(10), '100% Coh'],...
-                           ['0% Corr', char(10), ' 0% Coh'],...
-                           'blank'};
+                textStr = {['full', char(10), 'cue'],...
+                           ['IOVD', char(10), 'un-corr'],...
+                           ['IOVD', char(10), ' anti-corr'],...
+                           ['full', char(10), 'reference'],...
+                           ['noise', char(10), 'reference'],...
+                           ['no', char(10), 'reference']};
                 for p = 1:3
                     % plot patch
                     patch(patchX+(p-1)/3,patchY+patchH*1.5,patchColors{p+(s-1)*3},'edgecolor','none','parent',text_axis);
@@ -431,21 +431,22 @@ for e = 1:numExp
             else
             end
             rcaColorBar(:,f) = [min(readyRCA(curFreq).A(:,rcNum)),max(readyRCA(curFreq).A(:,rcNum))];
-            newExtreme = round(max(abs(rcaColorBar(:,f)))*10)./10;
+            newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
             rcaColorBar(:,f) = [-newExtreme,newExtreme*1.001];
         else
         end
         [figH(e,f),cH(e,f)] = mrC.plotOnEgi(readyRCA(curFreq).A(:,rcNum)*flipIdx(f,e),rcaColorBar(:,f),true);
         text(-1.3,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.05,sprintf('Exp. %0.0f',adultExp(e)),'fontsize',fSize,'fontname','Helvetica');
         if e == 1
-            text(0.9,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.05,freqLabels{f},'fontsize',fSize,'fontname','Helvetica');
+            freqStr = ['\it\fontname{Arial}',freqLabels{f}];
+            text(0.9,max(get(gca,'ylim'))-diff(get(gca,'ylim'))*.05,freqStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
         else
         end
         hold off
         if e == numExp
             % adjust positions
             for e = 1:numExp
-                if e == numExp
+                if e == numExp;
                     set(cH(e,f),'fontsize',fSize,'fontname','Helvetica','YTick',linspace(min(rcaColorBar(:,f)),min(rcaColorBar(:,f))*-1,5));
                     xlabel(cH(e,f),'weights','fontsize',fSize,'fontname','Helvetica')
                     set(cH(e,f),'location','southoutside');
@@ -470,6 +471,10 @@ for e = 1:numExp
                     newPos(4) = newPos(4)*multY;
                 end
                 set(egiH(e,f),'position',newPos);
+            end
+            if f ~= 2
+                set(cH(e,f),'visible','off');
+            else
             end
             set(cH(e,f),'position',cBarPos);
         else
