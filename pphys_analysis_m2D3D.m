@@ -218,7 +218,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         yMin = 0; yMax = 8;
         logOpts ={'ytick',yMin:1:yMax};
     end
-    gcaOpts = {'tickdir','out','ticklength',[0.025,0.025],'box','off','fontsize',fSize,'fontname','Arial','linewidth',lWidth};
+    gcaOpts = {'tickdir','out','ticklength',[0.025,0.025],'box','off','fontsize',fSize,'fontname','Arial','linewidth',lWidth,'clipping','off'};
     cBrewer = load('colorBrewer.mat');
     color1 = [cBrewer.rgb20(3,:); cBrewer.rgb20(4,:)];
     color2 = [cBrewer.rgb20(5,:); cBrewer.rgb20(6,:)];
@@ -250,14 +250,17 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
     for z = 1:4
         if isempty(strfind(bothLabels{z},'3D'));
             h2D = bar(z,bothGrand(z),'facecolor',color1(expNum,:),'edgecolor','none','basevalue',baseVal);
+            plot(z,aveBoth(z,includeIdx),'ko');            
         else
             h3D = bar(z,bothGrand(z),'facecolor',color2(expNum,:),'edgecolor','none','basevalue',baseVal);
+            plot(z,aveBoth(z,includeIdx),'ko');
         end
     end
-    errorb(1:4,bothGrand,bothStderr,'barwidth',.75,'linewidth',lWidth);
+    %errorb(1:4,bothGrand,bothStderr,'barwidth',.75,'linewidth',lWidth);
     xlim([.5,4.5]);
     ylim([yMin,yMax]);
     set(gca,gcaOpts{:},'xtick',[1.5,3.5],'xticklabel',{'horizontal','vertical'},logOpts{:});
+    set(get(gca,'children'),'clipping','off')
     %legend([h2D,h3D],pphysLabels,'location','northwest','fontsize',fSize,'fontname','Arial');
     %legend boxoff;
     hold off
