@@ -18,7 +18,7 @@ dateStr = datestr(clock,26);
 dateStr(strfind(dateStr,'/')) ='';
 
 % make subject list
-topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/';
+topFolder = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/';
 if plotSupplemental
     expList = {'exp4','exp5'};
     condsToUse = [4,8];   
@@ -58,7 +58,7 @@ for f = 1:length(subjList)
     folderNames{f} = sprintf('%s/Exp_TEXT_HCN_128_Avg',tempFolders{end});
 end
 
-saveFilePath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/paper_figures/figure5';
+saveFilePath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures/paper_figures/figure5';
 
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
 freqsToUse= [2,4]; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
@@ -122,7 +122,7 @@ close all
 rcNum = 1;
 lWidth = 1.5;
 fSize = 12;
-gcaOpts = {'tickdir','out','ticklength',[0.0500,0.0500],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
+gcaOpts = {'tickdir','out','ticklength',[0.0500,0],'box','off','fontsize',fSize,'fontname','Helvetica','linewidth',lWidth};
 cBrewer = load('colorBrewer.mat');
 mainColors = [cBrewer.rgb20(5,:); cBrewer.rgb20(7,:)];
 
@@ -140,8 +140,8 @@ end
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLabels);
     logStep = diff(reallog(binVals(1:2))); % step size
-    xMin = exp(reallog(binVals(1))-logStep*.5);
-    xMax = exp(reallog(binVals(end))+logStep*2.5); % add 2.5 steps
+    xMin = reallog(binVals(1))-logStep*.5;
+    xMax = reallog(binVals(end))+logStep*2.5; % add 2.5 steps
     extraBins = arrayfun(@(x) exp(reallog(binVals(end))+x), [logStep,logStep*2]);
     
     % make Naka-Rushton values
@@ -293,8 +293,11 @@ for f=1:length(freqsToUse)
         else
             ampMarkerStyle = {'sq','LineWidth',lWidth,'Color',mainColors(c,:),'markerfacecolor',[1 1 1],'MarkerSize',7}; % 'MarkerEdgeColor','none'
         end
-        valH(c)=plot([binVals;extraBins((condsToUse(c)>4)+1)],valSet(:,c),ampMarkerStyle{:});
-        hE = ErrorBars([binVals;extraBins((condsToUse(c)>4)+1)],valSet(:,c),[errSet1(:,c),errSet2(:,c)],'color',mainColors(c,:),'type','bar','cap',false,'barwidth',lWidth);
+        xVals = reallog([binVals;extraBins((condsToUse(c)>4)+1)]);
+        yVals = valSet(:,c);
+        errVals = [errSet1(:,c),errSet2(:,c)];
+        valH(c)=plot(xVals,yVals,ampMarkerStyle{:});
+        hE = ErrorBars(xVals,yVals,errVals,'color',mainColors(c,:),'type','bar','cap',false,'barwidth',lWidth);
         uistack(valH(c),'bottom')
         cellfun(@(x) uistack(x,'bottom'), hE);
         hold on
@@ -303,7 +306,7 @@ for f=1:length(freqsToUse)
         nFine = 1e2;
         nrX = linspace( min(binVals), max(binVals), nFine )';
         nrVals = NRmodel( nrX, NRset(:,c));
-        hNR{c} = plot( nrX, nrVals, '-','color',mainColors(c,:), 'LineWidth',lWidth);
+        hNR{c} = plot( reallog(nrX), nrVals, '-','color',mainColors(c,:), 'LineWidth',lWidth);
     end
     cellfun(@(x) uistack(x,'bottom'), hNR);
     
@@ -313,7 +316,7 @@ for f=1:length(freqsToUse)
         yMax = 5;
         legend(valH,{'horizontal','vertical'},'fontsize',fSize,'fontname','Helvetica','location','northwest');
         legend boxoff
-        titleStr = '\it\fontname{Arial}2F';
+        titleStr = '\it\fontname{Helvetica}2F ';
         title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
     else
         yUnit = 0.5;
@@ -321,45 +324,46 @@ for f=1:length(freqsToUse)
         yMax = 1.5;
         ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
         xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
-        titleStr = '\it\fontname{Arial}4F';
+        titleStr = '\it\fontname{Arial}4F ';
         title(titleStr,'fontsize',fSize,'fontname','Helvetica','interpreter','tex');
     end
-    set(gca,gcaOpts{:},'XScale','log','XMinorTick','off','xtick',[0,0.2,0.5,1,2,4,8,16],'ytick',0:yUnit:yMax,'Layer','top');
+    set(gca,gcaOpts{:},'XMinorTick','off','xtick',reallog([0.2,0.5,1,2,4,8,16]),'xticklabels',arrayfun(@(x) num2str(x),([0.2,0.5,1,2,4,8,16]),'uni',false),'ytick',0:yUnit:yMax,'Layer','top');
           
     xlim([xMin,xMax]);
     ylim([yMin,yMax])
-    text(xMin-logStep*.75,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
+    text(xMin-logStep*.75,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.1,...
         plotLabel(f),'fontsize',fSize*2,'fontname','Helvetica');
-    text(xMax+logStep*1.5,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.15,...
+    text(xMax+logStep*1.5,max(get(gca,'ylim'))+diff(get(gca,'ylim'))*.1,...
         plotLabel(f+2),'fontsize',fSize*2,'fontname','Helvetica');
 
     % split point between bin and average vals
-    xSplit = exp(reallog(binVals(end))+logStep*.5);
+    xSplit = reallog(binVals(end))+logStep*.5;
     plot(ones(2,1)*xSplit,[0,yMax],'k','LineWidth',lWidth)
     % plot noise patch, 
     % add mean bin noise twice to the end with extra bin
     % we are plotting the mean values over two x-axis points
-    xNoiseVals = [xMin,xMin,binVals',xSplit,xSplit];
+    xNoiseVals = [xMin,xMin,reallog(binVals'),xSplit,xSplit];
     yNoiseVals = [0,noiseSet(1),noiseSet(1:end-1)',noiseSet(end-1),0]; % start and end points just repeats of first and last
+    pH(1) = fill(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
     % additional vals for averages
-    xNoiseVals = [xNoiseVals,xSplit,xSplit,extraBins,xMax,xMax];
-    yNoiseVals = [yNoiseVals,0,repmat(noiseSet(end),1,4),0];
-    pH = patch(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
-    uistack(pH,'bottom')
+    xNoiseVals = [xSplit,xSplit,reallog(extraBins),xMax,xMax];
+    yNoiseVals = [0,repmat(noiseSet(end),1,4),0];
+    pH(2) = fill(xNoiseVals,yNoiseVals,[.75 .75 .75],'edgecolor','none');
+    arrayfun(@(x) uistack(x,'bottom'), pH);
 end
 
 
 
 for f = 1:length(freqsToUse)
-    addX = 0.7;
-    addY = 0.7;
+    addX = 0.38;
+    addY = 0.38;
     if f == length(freqsToUse)
         set(cH(f),'fontsize',fSize,'fontname','Helvetica','YTick',linspace(min(rcaColorBar),min(rcaColorBar)*-1,5));
         ylabel(cH(f),'weights','fontsize',fSize,'fontname','Helvetica')
         set(cH(f),'location','eastoutside');
         set(cH(f),'units','centimeters');
         %cBarPos = get(cH(e,f),'position');
-        cBarPos = [14.5,4.5,.4,4];
+        cBarPos = [14,4.5,.4,4];
         set(cH(f),'position',cBarPos);
         oldPos = newPos;
         newPos = get(egiH(f),'position');
@@ -370,7 +374,7 @@ for f = 1:length(freqsToUse)
     else
         set(cH(f),'visible','off');
         newPos = get(egiH(f),'position');
-        newPos(1) = newPos(1)-(newPos(3)*addX*.7);
+        newPos(1) = newPos(1)-(newPos(3)*addX);
         newPos(2) = newPos(2)-(newPos(4)*addY*.6);
         newPos(3) = newPos(3)*(1+addX);
         newPos(4) = newPos(4)*(1+addY);
