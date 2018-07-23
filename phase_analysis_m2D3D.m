@@ -17,7 +17,7 @@ dateStr = datestr(clock,26);
 dateStr(strfind(dateStr,'/')) ='';
 
 % make subject list
-topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/';
+topFolder = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/';
 
 expList = {'exp1','exp2','exp3','exp4'};
 condsToUse = [1,3,5,7]; % use full reference conditions
@@ -54,7 +54,7 @@ for f = 1:length(subjList)
     folderNames{f} = sprintf('%s/Exp_TEXT_HCN_128_Avg',tempFolders{end});
 end
 
-saveFilePath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/phase_analysis';
+saveFilePath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures/phase_analysis';
 
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
 freqsToUse= [2,4]; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)

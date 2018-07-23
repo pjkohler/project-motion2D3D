@@ -17,13 +17,13 @@ setenv('DYLD_LIBRARY_PATH','')
 clear all
 close all
 
-mainPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
+mainPath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications';
 figureFolder = sprintf('%s/figures/infant_exp',mainPath);
 
 %% IDENTIFY DATA LOCATION
 folderNames=[];
 expIdx=[];
-dataLocation = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/infant_exp';
+dataLocation = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/infant_exp';
 folderNames = [folderNames; subfolders(sprintf('%s/*20*',dataLocation),1)]; %change back to 128 between wild cards
 expIdx = [expIdx; ones(size(subfolders(sprintf('%s/*20*',dataLocation))))];
 

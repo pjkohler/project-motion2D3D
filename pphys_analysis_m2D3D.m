@@ -40,7 +40,7 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
 
     %% PRELIMINARY
     % folder names
-    topPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
+    topPath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications';
     dataPath = sprintf('%s/pphys_exp%0.0f',topPath,expNum);
     subPaths = subfolders(sprintf('%s/*20*',dataPath),1);
     adultExp = [1,2,3,4,5];
