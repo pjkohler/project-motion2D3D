@@ -5,7 +5,7 @@ close all;
 
 adultExp = [1,2,3,4,5];
 plotType = 'freq';
-figFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures';
+figFolder = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures';
 %figFolder = '/Users/kohler/Desktop/figures';
 
 % PROJECTED DATA OR NOT?
@@ -552,7 +552,7 @@ for f = 1:nFreq
                     deleteIdx = arrayfun(@(x) ismember(get(x,'color'),deleteColors,'rows'),lineObjs);
                     delete(lineObjs(deleteIdx))
                 end
-                saveLocation = sprintf('/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D/figures/exp%d',e);
+                saveLocation = sprintf('/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures/exp%d',e);
                 if ~exist(sprintf('%s/exp%d_talkFigures',saveLocation,e),'dir')
                     mkdir(sprintf('%s/exp%d_talkFigures',saveLocation,e));
                 else

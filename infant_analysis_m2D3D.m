@@ -40,7 +40,7 @@ function infant_analysis_m2D3D(projectedData,rcaType,doFreq)
         end
     end
 
-    mainPath = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
+    mainPath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications';
     %mainPath = '/Users/kohler/Desktop';
     figureFolder = sprintf('%s/figures/infant_exp',mainPath);
     load(sprintf('%s/BabyDataOutput.mat', figureFolder),'babyRCA'); %file name from prep workspace export

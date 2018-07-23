@@ -1,17 +1,16 @@
-%% Script for running Condition-Specific RCA on Disparity data 
+%% SCRIPT FOR DOING PHASE ANALYSIS
 
 codeFolder = '/Users/kohler/code';
 rcaCodePath = sprintf('%s/git/rcaBase',codeFolder);
 addpath(genpath(rcaCodePath));
 addpath(genpath(sprintf('%s/git/mrC',codeFolder)));
 addpath(genpath(sprintf('%s/git/schlegel/matlab_lib',codeFolder)));
+addpath(genpath('~/code/git/export_fig/'))
 setenv('DYLD_LIBRARY_PATH','')
 
-clear all; close all;
+close all; clear superRCA;
 
-%% Set up inputs 
-plotSupplemental = false;
-projectedData = true;
+%% PREPARE
 
 % we now hardcode the paths to the two data sets
 dateStr = datestr(clock,26);
@@ -19,13 +18,10 @@ dateStr(strfind(dateStr,'/')) ='';
 
 % make subject list
 topFolder = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/';
-if plotSupplemental
-    expList = {'exp4','exp5'};
-    condsToUse = [4,8];   
-else
-    expList = {'exp1','exp2','exp3','exp4'};
-    condsToUse = [3,7];
-end
+
+expList = {'exp1','exp2','exp3','exp4'};
+condsToUse = [1,3,5,7]; % use full reference conditions
+
 idList = [];
 for e = 1:length(expList);
     expFolder = subfolders(sprintf('%s/*%s*',topFolder,expList{e}),1);
@@ -58,7 +54,7 @@ for f = 1:length(subjList)
     folderNames{f} = sprintf('%s/Exp_TEXT_HCN_128_Avg',tempFolders{end});
 end
 
-saveFilePath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures/paper_figures/figure5';
+saveFilePath = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications/figures/phase_analysis';
 
 binsToUse=1:10; % indices of bins to include in analysis (the values must be present in the bin column of all DFT/RLS exports)
 freqsToUse= [2,4]; % indices of frequencies to include in analysis (the values must be present in the frequency column of all DFT/RLS exports)
@@ -75,7 +71,7 @@ trialError = false;
 condNames = {'HorizontalDisparity', 'VerticalDisparity'};
 for f = 1:length(freqsToUse)
     superRCA(f) = rcaSweep(folderNames,binsToUse,freqsToUse(f),condsToUse,trialsToUse,nReg,nComp,dataType,chanToCompare,1,rcPlotStyle,forceSourceData);
-    export_fig(sprintf('%s/SuperSetHoriVert_%0.0f_cov.pdf',saveFilePath,freqsToUse(f)),'-pdf','-transparent',gcf);
+    export_fig(sprintf('%s/SuperSetHoriVert_%0.0f_cov.pdf',saveFilePath,freqsToUse(f)),'-pdf','-transparent','-opengl',gcf);
     close gcf;
 end
 zeroData = cellfun(@(x) any(x(:)==0), cat(1,superRCA(:).data));
@@ -89,7 +85,7 @@ end
 
 keepConditions = true;
 errorType = 'SEM';
-doNR = false(2,6,2); % 2 freqs, 5 RCs, 2 conditions
+doNR = false(2,6,4); % 2 freqs, 5 RCs, 2 conditions
 doNR(:,1,:) = true; % do fitting for first RC, second and fourth harmonic, all conditions
 
 for f = 1:length(superRCA)
@@ -117,6 +113,8 @@ end
 delete(gcp('nocreate'));
 clc;
 
+ellipsePlot(superRCA(1))
+
 %% MAKE FIGURE
 close all
 rcNum = 1;
@@ -132,11 +130,7 @@ newExtreme = round(max(abs(rcaColorBar(:,f)))*5)./5;
 %rcaColorBar = [-newExtreme,newExtreme*1.001];
 rcaColorBar = [-0.4,0.4001];
 plotLabel = {'A','B','C','D'};
-if plotSupplemental
-    flipIdx = [1,1];
-else
-    flipIdx = [1,1];
-end
+
 for f=1:length(freqsToUse)
     binVals = cellfun(@(x) str2num(x), superRCA(f).settings.binLabels);
     logStep = diff(reallog(binVals(1:2))); % step size
@@ -169,66 +163,37 @@ for f=1:length(freqsToUse)
     noiseImag = cell2mat(permute(noiseImag,[3,2,1]));
     realBinMeanNoise = squeeze(nanmean(noiseReal));
     imagBinMeanNoise = squeeze(nanmean(noiseImag));
-        
-    if ~projectedData
-        % grab values from data structure
-        valSet = squeeze(superRCA(f).stats.Amp(:,rcNum,:));
-        errSet1 = squeeze(superRCA(f).stats.ErrLB(:,rcNum,:));
-        errSet2 = squeeze(superRCA(f).stats.ErrLB(:,rcNum,:));
-        % compute vector means of mean bins, and errors
-        valSet(length(binVals)+1,:) = sqrt(nanmean(realBinMean,1).^2+nanmean(imagBinMean,1).^2);
-        
-        % store p-values for later
-        
-        % compute elliptical error and do Hotelling's T2 against zero
-        for c=1:length(condsToUse)
-            rc_tSqrdP(1:length(binVals),c+(f-1)*3) = superRCA(f).stats.tSqrdP(:,rcNum,c);
-            rc_tSqrdVal(1:length(binVals),c+(f-1)*3) = superRCA(f).stats.tSqrdVal(:,rcNum,c);
-            xyBinMean = cat(2,realBinMean(:,c),imagBinMean(:,c));
-            nanVals = sum(isnan(xyBinMean),2)>0;      
-            [binErrs,~,~,errorEllipse] = fitErrorEllipse(xyBinMean(~nanVals,:),'SEM');
-            errSet1(length(binVals)+1,c) = binErrs(1);
-            errSet2(length(binVals)+1,c) = binErrs(2);
-            % compute t-values
-            tStruct = tSquaredFourierCoefs(xyBinMean(~nanVals,:));
-            rc_tSqrdP(length(binVals)+1,c+(f-1)*3) = tStruct.pVal;
-            rc_tSqrdVal(length(binVals)+1,c+(f-1)*3) = tStruct.tSqrd;
-            % note, just using mean df for all values, would need
-            % to be fixed if multi data was ever used seriously
-            rc_tSqrdDF(1:length(binVals)+1,c+(f-1)*3) = tStruct.df2;
+
+    % compute projected vector mean
+    % move subjects to first dim
+    realVector = permute(rcaDataReal,[2,1,3]);
+    imagVector = permute(rcaDataImag,[2,1,3]);
+    project_amps = vectorProjection(realVector,imagVector);
+    % compute mean of projected vector amplitude, over bins
+    project_amps(:,end+1,:) = nanmean(project_amps,2);
+    % if all values are NaN
+    if any(sum(squeeze(all(isnan(project_amps),2)),2)>0)
+        nan_subs = find(sum(squeeze(all(isnan(project_amps),2)),2)>0);
+        for z = 1:length(nan_subs)
+            msg = ...
+                sprintf('Subject %d has no values in one or more conditions, setting all values to NaN', ...
+                nan_subs(z));
+            warning(msg);
+            project_amps(nan_subs(z),:,:) = NaN;
         end
     else
-        % compute projected vector mean
-        % move subjects to first dim
-        realVector = permute(rcaDataReal,[2,1,3]);
-        imagVector = permute(rcaDataImag,[2,1,3]);
-        project_amps = vectorProjection(realVector,imagVector);
-        % compute mean of projected vector amplitude, over bins
-        project_amps(:,end+1,:) = nanmean(project_amps,2);
-        % if all values are NaN
-        if any(sum(squeeze(all(isnan(project_amps),2)),2)>0)
-            nan_subs = find(sum(squeeze(all(isnan(project_amps),2)),2)>0);
-            for z = 1:length(nan_subs)
-                msg = ...
-                    sprintf('Subject %d has no values in one or more conditions, setting all values to NaN', ...
-                    nan_subs(z));
-                warning(msg);
-                project_amps(nan_subs(z),:,:) = NaN;
-            end
-        else
-        end
-         % make new valset and error set
-        valSet = squeeze(nanmean(project_amps,1));
-        temp_SE = squeeze(nanstd(project_amps,0,1)./sqrt(size(project_amps,1)));
-        errSet1 = temp_SE;
-        errSet2 = temp_SE;
-        % compute t-values
-        [~,temp_p,~,temp_stats] = ttest(project_amps,0,'alpha',0.05,'dim',1,'tail','right');
-        rc_tSqrdP(:,(1:2)+(f-1)*3) = permute(temp_p,[2,3,1]);
-        rc_tSqrdVal(:,(1:2)+(f-1)*3) = permute(temp_stats.tstat,[2,3,1]);
-        rc_tSqrdDF(:,(1:2)+(f-1)*3) = permute(temp_stats.df,[2,3,1]);
-        clear temp_*;
     end
+     % make new valset and error set
+    valSet = squeeze(nanmean(project_amps,1));
+    temp_SE = squeeze(nanstd(project_amps,0,1)./sqrt(size(project_amps,1)));
+    errSet1 = temp_SE;
+    errSet2 = temp_SE;
+    % compute t-values
+    [~,temp_p,~,temp_stats] = ttest(project_amps,0,'alpha',0.05,'dim',1,'tail','right');
+    rc_tSqrdP(:,(1:2)+(f-1)*3) = permute(temp_p,[2,3,1]);
+    rc_tSqrdVal(:,(1:2)+(f-1)*3) = permute(temp_stats.tstat,[2,3,1]);
+    rc_tSqrdDF(:,(1:2)+(f-1)*3) = permute(temp_stats.df,[2,3,1]);
+    clear temp_*;
     
     % maximum noise across all four conditions being plotted
     % since this is just means, we can compute it the same way for
@@ -238,33 +203,16 @@ for f=1:length(freqsToUse)
     noiseSet(length(binVals)+1) = max(sqrt(nanmean(realBinMeanNoise,1).^2+nanmean(imagBinMeanNoise,1).^2));
     
     for b = 1:(length(binVals)+1)
-        if ~projectedData
-            if b <= (length(binVals))
-                xyData = permute(cat(1,rcaDataReal(b,:,:),rcaDataImag(b,:,:)),[2,1,3]);
-            else
-                xyData = cat(3,realBinMean, imagBinMean);
-            end
-            tempStrct = tSquaredFourierCoefs(xyData);
-            rc_tSqrdP(b,3+(f-1)*3) = tempStrct.pVal;
-            rc_tSqrdSig(b,3+(f-1)*3) = tempStrct.pVal < 0.05;
-            rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tSqrd;
-            rc_tSqrdDF(b,3+(f-1)*3) = tempStrct.df2;
-            rc_tSqrdD(b,f) = tempStrct.mahalanobisD;
-            rc_tSqrdU(b,f) = tempStrct.cohenNonOverlap;
-            rc_tSqrdMu1(b,f) = valSet(b,1);
-            rc_tSqrdMu2(b,f) = valSet(b,2);
-        else
-            curData = squeeze(project_amps(:,b,:));
-            not_nan = ~any(isnan(curData),2);
-            [rc_tSqrdSig(b,3+(f-1)*3),rc_tSqrdP(b,3+(f-1)*3),~,tempStrct] = ttest(curData(not_nan,1),curData(not_nan,2),'alpha',0.05,'dim',1,'tail','both');
-            rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tstat;
-            rc_tSqrdDF(b,3+(f-1)*3) = tempStrct.df;
-            rc_tSqrdD(b,f) = rc_tSqrdVal(b,3+(f-1)*3)./sqrt(tempStrct.df+1); % Cohen's D
-            OVL = 2*normcdf(-abs(rc_tSqrdD(b,f)/2));
-            rc_tSqrdU(b,f) = 1-OVL/(2-OVL); 
-            rc_tSqrdMu1(b,f) = mean(curData(not_nan,1));
-            rc_tSqrdMu2(b,f) = mean(curData(not_nan,2));
-        end
+        curData = squeeze(project_amps(:,b,:));
+        not_nan = ~any(isnan(curData),2);
+        [rc_tSqrdSig(b,3+(f-1)*3),rc_tSqrdP(b,3+(f-1)*3),~,tempStrct] = ttest(curData(not_nan,1),curData(not_nan,2),'alpha',0.05,'dim',1,'tail','both');
+        rc_tSqrdVal(b,3+(f-1)*3) = tempStrct.tstat;
+        rc_tSqrdDF(b,3+(f-1)*3) = tempStrct.df;
+        rc_tSqrdD(b,f) = rc_tSqrdVal(b,3+(f-1)*3)./sqrt(tempStrct.df+1); % Cohen's D
+        OVL = 2*normcdf(-abs(rc_tSqrdD(b,f)/2));
+        rc_tSqrdU(b,f) = 1-OVL/(2-OVL); 
+        rc_tSqrdMu1(b,f) = mean(curData(not_nan,1));
+        rc_tSqrdMu2(b,f) = mean(curData(not_nan,2));
     end
     
     % do Naka-Rushton, paired tests
@@ -352,8 +300,6 @@ for f=1:length(freqsToUse)
     arrayfun(@(x) uistack(x,'bottom'), pH);
 end
 
-
-
 for f = 1:length(freqsToUse)
     addX = 0.38;
     addY = 0.38;
@@ -387,86 +333,5 @@ figPos = get(gcf,'pos');
 figPos(4) = figPos(4)/figPos(3)*17.8;
 figPos(3) = 17.8;
 set(gcf,'pos',figPos);
-if projectedData
-    suffix = 'proj';
-else
-    suffix = 'multi';
-end
-
-if plotSupplemental
-    export_fig(sprintf('%s/suppl_figure5_combined_%s.pdf',saveFilePath,suffix),'-pdf','-transparent',gcf);
-else
-    export_fig(sprintf('%s/figure5_combined_%s.pdf',saveFilePath,suffix),'-pdf','-transparent',gcf);
-end
-
-if ~projectedData
-    return
-else
-end
-
-%% MAKE TABLE
-%if plotSupplemental
-%    paperText = 'In 2nd harmonic data from Experiments 4 and 5, ';
-%else
-%    paperText = 'In 2nd harmonic data from Experiments 1,2,4 and 8, ';
-%end
-
-if ~all(rc_tSqrdDF(1,:) == rc_tSqrdDF(1,1))
-    error('different dfs for different tests');
-else
-end
-
-stringPairedP = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdP,'uni',false);
-sigIdx = cell2mat(arrayfun(@(x) x < 0.0001,rc_tSqrdP,'uni',false));
-stringPairedP(sigIdx) = {'<0.0001'};
-stringPairedSig = cell(size(rc_tSqrdSig));
-stringPairedSig(rc_tSqrdSig==1) = {'*'};
-stringPairedSig(rc_tSqrdSig==0) = {'ns'};
-stringPairedT = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdVal,'uni',false);
-stringBinVals = cat(1,arrayfun(@(x) num2str(x,'%0.2f'),binVals,'uni',false),{'n/a'});
-stringPairedD = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdD,'uni',false);
-stringPairedDegFree = arrayfun(@(x) num2str(x,'%0.0f'),min(rc_tSqrdDF'),'uni',false)';
-stringPairedU = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdU,'uni',false);
-stringPairedMu1 = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdMu1,'uni',false);
-stringPairedMu2 = arrayfun(@(x) num2str(x,'%0.4f'),rc_tSqrdMu2,'uni',false);
-
-
-readyArray = [stringBinVals, stringPairedP(:,3),stringPairedT(:,3),stringPairedD(:,1)...
-                stringPairedP(:,6),stringPairedT(:,6),stringPairedD(:,2)]';
-rowLabels = {'disp (arcmins)','2F p','2F t-value','2F Cohen''s D','4th p','4F t-value','4F Cohen''s D'}';
-
-readyArray = cat(2,rowLabels,readyArray);
-
-if plotSupplemental
-    titleStr = 'Exp. 4-5 (IOVD)';
-    tableIdx = 2;
-else
-    titleStr = 'Exp. 1-4 (CDOT+IOVD)';
-    tableIdx = 1;
-end
-
-varLabels = cat(2,{num2str(rc_tSqrdDF(1),'df=%0.0f')},...
-              arrayfun(@(x) num2str(x,'bin%0.0f'),1:length(binVals),'uni',false),...
-              {'ave'});
-titleLabels = cell(size(varLabels));
-titleLabels{1} = titleStr;
-
-readyArray = cat(1,titleLabels,varLabels,readyArray);
-table_file = sprintf('%s/superset_table%0.0f.csv',saveFilePath,tableIdx);
-superTable = array2table(readyArray);
-writetable(superTable,table_file,'WriteRowNames',false,'WriteVariableNames',false);
-
-if exist(sprintf('%s/superset_table1.csv',saveFilePath)) && exist(sprintf('%s/superset_table2.csv',saveFilePath))
-    combined_file = sprintf('%s/superset_combined.csv',saveFilePath);
-    if exist(combined_file,'file')
-        delete(combined_file);
-    else
-    end
-    catCmd{1} = sprintf('cd %s',saveFilePath);
-    catCmd{2} = 'cat superset_table1.csv superset_table2.csv > superset_combined.csv';
-    system(strjoin(catCmd, '; '));
-else
-end
-
 
     

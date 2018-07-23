@@ -15,7 +15,7 @@ setenv('DYLD_LIBRARY_PATH','')
 folderNames =[];
 expIdx = [];
 adultExp = [1,2,3,4,5];
-topFolder = '/Volumes/Denali_4D2/kohler/EEG_EXP/DATA/motion2D3D';
+topFolder = '/Volumes/svndl/FinishedExperiments/2018_Kohler_NatureCommunications';
 for z=1:length(adultExp) % load all adult experiments
     dataLocation(z) = subfolders(sprintf('%s/exp%0.0f*',topFolder,adultExp(z)),1);
     folderNames=[folderNames;subfolders(sprintf('%s/*20*',dataLocation{z}),1)];
