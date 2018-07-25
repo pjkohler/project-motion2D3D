@@ -793,6 +793,8 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         xlim([xMin,xMax]);
         ylim([0,yMax])
         
+        oldAx = gca;
+
         newAx = axes('position',get(gca,'position'));
         set(newAx,'visible','off');
         xText(1) = min(get(newAx,'xlim'))-diff(get(newAx,'xlim'))*.15;
@@ -804,20 +806,20 @@ function pphys_analysis_m2D3D(expNum,taskFig,logConvert,rcaType,projectedData,fl
         switch z
             case 1
                 plotLabel = 'A';
-                title('horizontal','fontsize',fSize,'fontname','Helvetica')
+                %title(oldAx,'horizontal','fontsize',fSize,'fontname','Helvetica')
                 text(xText(2),yText(2),'full reference','fontsize',fSize,'fontname','Helvetica')
             case 2
                 plotLabel = 'B';
-                title('vertical','fontsize',fSize,'fontname','Helvetica')
+                %title(oldAx,'vertical','fontsize',fSize,'fontname','Helvetica')
                 text(xText(2),yText(2),'full reference','fontsize',fSize,'fontname','Helvetica')
             case 3
                 plotLabel = 'D';
-                title('horizontal','fontsize',fSize,'fontname','Helvetica')
-                ylabel('amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
-                xlabel('displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
+                %title(oldAx,'horizontal','fontsize',fSize,'fontname','Helvetica')
+                ylabel(oldAx,'amplitude (\muV)','fontsize',fSize,'fontname','Helvetica')
+                xlabel(oldAx,'displacement (arcmins)','fontsize',fSize,'fontname','Helvetica');
                 text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             case 4
-                title('vertical','fontsize',fSize,'fontname','Helvetica')
+                %title(oldAx,'vertical','fontsize',fSize,'fontname','Helvetica')
                 plotLabel = 'E';
                 text(xText(2),yText(2),'no reference','fontsize',fSize,'fontname','Helvetica')
             otherwise
