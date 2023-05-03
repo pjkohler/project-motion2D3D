@@ -4,7 +4,7 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
         plot_ave = true;
     end
     if nargin < 8
-        f_1 = 2; 
+        f_1 = 1; 
     else
     end
     if nargin < 7
@@ -15,19 +15,20 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
         gca_opts = {'tickdir','out','box','off','fontsize',12,'fontname','Helvetica','linewidth',l_width,'Color','none'};
     else
     end
+    
+    n_conds = size(rc_struct.data,1);
+    n_subs = size(rc_struct.data,2);
+    
     if nargin < 5
-        cond_labels = {'h-in','h-anti','v-in','v-anti'};
-    else
+        cond_labels = arrayfun(@(x) sprintf('cond%01d', x), 1:n_conds, 'uni', false);
     end
     if nargin < 4
-        c_brewer = load('colorBrewer.mat');
+        c_brewer = load('colorBrewer_new.mat');
         cond_colors = c_brewer.rgb20(1:2:end,:);
         cond_colors([2,3],:) = cond_colors([3,2],:);
     else
     end
     
-    n_conds = size(rc_struct.data,1);
-    n_subs = size(rc_struct.data,2);
     
     [raw_real,raw_imag] = getRealImag(rc_struct.data);
     [comp_real,comp_imag] = getRealImag(rc_struct.comparisonData);
@@ -35,7 +36,7 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
     raw_imag = cellfun(@(x,y) cat(2,x,y), raw_imag,comp_imag,'uni',false);
     
     if nargin < 3
-        rc_num = [1,6];
+        rc_num = 1;
     else
     end
     
@@ -66,13 +67,13 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
             for c = 1:n_conds
                 xy_vals = cat(2,rca_real(sub_idx,c,b),rca_imag(sub_idx,c,b));
                 nan_vals = sum(isnan(xy_vals),2)>0;
-                [ampDiff,phaseDiff,~,error_ellipse] = fitErrorEllipse(xy_vals(~nan_vals,:),'95CI');
+                [ampDiff,phaseDiff,~,error_ellipse] = fitErrorEllipse(xy_vals(~nan_vals,:),'1STD');
                 ellipse_data(b,c,r).ellipse = error_ellipse;
                 ellipse_data(b,c,r).means = nanmean(xy_vals);
                 ellipse_data(b,c,r).phaseDiff = phaseDiff;
                 ellipse_data(b,c,r).ampDiff = ampDiff;
-                if b == 8 && c == 3
-                    [ampDiff,phaseDiff,~,error_ellipse] = fitErrorEllipse(xy_vals(~nan_vals,:),'95CI',true);
+                if b == n_bins && c == 1
+                    [ampDiff,phaseDiff,~,error_ellipse] = fitErrorEllipse(xy_vals(~nan_vals,:),'1STD',true);
                 else
                 end
             end
@@ -90,22 +91,42 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
         set(ellipse_fig,'pos',fig_pos);
         
         bin_vals = cell2mat(cellfun(@(x) str2num(x),rc_struct.settings.binLabels,'uni',false));
-        bin_text = arrayfun(@(x) num2str(x,'%.1f'),bin_vals,'uni',false);
-        log_step = diff(reallog(bin_vals(1:2))); % step size
-        x_min = reallog(bin_vals(1))-log_step*.5;
-        if plot_ave
-            bin_text = [bin_text; 'ave'];
-            x_max = reallog(bin_vals(end))+log_step*2.5; % add 2.5 steps
-            extra_bins = arrayfun(@(x) reallog(bin_vals(end))+x, [log_step,log_step*2]);
+        if isnan(bin_vals(1))
+            log_step = 1;
+            bin_vals = (1:length(bin_vals))';
+            bin_text = arrayfun(@(x) num2str(x,'%.0f'),bin_vals,'uni',false);
+            x_min = 0.5;
+            if plot_ave
+                bin_text = [bin_text; 'ave'];
+                x_max = length(bin_vals)+2.5;
+                extra_bins = arrayfun(@(x) length(bin_vals)+x, [1,2]);
+            else
+                x_max = length(bin_vals)+.5;
+                extra_bins = [];
+            end
         else
-            x_max = reallog(bin_vals(end))+log_step*.5; % add 2.5 steps
-            extra_bins = [];
+            bin_text = arrayfun(@(x) num2str(x,'%.1f'),bin_vals,'uni',false);
+            log_step = diff(reallog(bin_vals(1:2))); % step size
+            x_min = reallog(bin_vals(1))-log_step*.5;
+            if plot_ave
+                bin_text = [bin_text; 'ave'];
+                x_max = reallog(bin_vals(end))+log_step*2.5; % add 2.5 steps
+                extra_bins = arrayfun(@(x) reallog(bin_vals(end))+x, [log_step,log_step*2]);
+            else
+                x_max = reallog(bin_vals(end))+log_step*.5; % add 2.5 steps
+                extra_bins = [];
+            end
+            bin_vals = reallog(bin_vals);
         end
         
         
         for b = 1:n_bins
             if b == 1
-                e_max = floor(max(max(abs(cat(1,ellipse_data(:,:,rc_num(r)).means))))*.75);
+                e_max = 1+ceil(max(max(abs(cat(1,ellipse_data(:,:,rc_num(r)).means))))*.75);
+                if e_max == 0
+                    e_max = 1;
+                else
+                end 
             else
             end
             if e_max > 1
@@ -192,14 +213,14 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
                 if z == 1
                     % plot amplitudes
                     big_plot(z) = subplot(2,n_bins,1:floor(n_bins/2));
-                    big_min = 0; big_max = ceil(max(max(squeeze(rc_struct.stats.Amp(:,rc_num(r),:)))));
-                    plot_vals = rc_struct.stats.Amp(1:n_bins,rc_num(r),c)';
+                    big_min = 0; big_max = 10; %ceil(max(max(squeeze(rc_struct.mean.amp_signal(:,:,rc_num(r))))));
+                    plot_vals = rc_struct.mean.amp_signal(1:n_bins,:,rc_num(r),c)';
                     plot_errs = cat(1,ellipse_data(1:n_bins,c,rc_num(r)).ampDiff)';
                     y_text = 'amplitude (\muV)';
                 else
                      % plot phase
                     big_plot(z) = subplot(2,n_bins,(floor(n_bins/2)+1):n_bins);
-                    big_min = 100; big_max = 200; 
+                    big_min = 0; big_max = 1/f_1 * 1000; 
                     temp_means = cat(1,ellipse_data(:,c,rc_num(r)).means);
                     temp_phases = angle(complex(temp_means(:,1),temp_means(:,2)))-(plot_offset);
                     temp_phases( temp_phases < 0 ) = 2*pi+temp_phases( temp_phases < 0 );
@@ -211,16 +232,16 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
                 end
                 hold on
                 if c > 2
-                    cur_x = [reallog(bin_vals'),extra_bins(2)];
+                    cur_x = [bin_vals', extra_bins(2)];
                 else
-                    cur_x = [reallog(bin_vals'),extra_bins(1)];
+                    cur_x = [bin_vals', extra_bins(1)];
                 end
                 if plot_ave
                     if c == 1
-                        plot(ones(1,2)*(reallog(bin_vals(end))+log_step*.5) ...
+                        plot(ones(1,2)*(bin_vals(end)+log_step*.5) ...
                             ,[big_min,big_max],'k-','linewidth',l_width);
                     else
-                    end
+                    end 
                     p_h(c) = plot(cur_x(1:end-1),plot_vals(1:end-1),'-o','linewidth',l_width,'Color',cond_colors(c,:),'markersize',10,'markerfacecolor','w','markeredgecolor',cond_colors(c,:));
                     plot(cur_x(end),plot_vals(end),'o','linewidth',l_width,'Color',cond_colors(c,:),'markersize',10,'markerfacecolor','w','markeredgecolor',cond_colors(c,:));
                 else
@@ -238,13 +259,18 @@ function ellipsePlot(rc_struct,sub_idx,rc_num,cond_colors,cond_labels,gca_opts,e
             xlim([x_min,x_max]);
             ylim([big_min,big_max]);
             
-            xtick_vals = reallog([0.2,0.5,1,2,4,8,16]);
-            xtick_labels = arrayfun(@(x) num2str(x),([0.2,0.5,1,2,4,8,16]),'uni',false);
-            
-            if plot_ave
-                xtick_vals = [xtick_vals,xtick_vals(end) + log_step*1.5];
-                xtick_labels = [xtick_labels,'ave'];
+            if isnan(bin_vals(1))
+                xtick_vals = reallog([0.2,0.5,1,2,4,8,16]);
+                xtick_labels = arrayfun(@(x) num2str(x),([0.2,0.5,1,2,4,8,16]),'uni',false);
+
+                if plot_ave
+                    xtick_vals = [xtick_vals,xtick_vals(end) + log_step*1.5];
+                    xtick_labels = [xtick_labels,'ave'];
+                else
+                end
             else
+                xtick_vals = 1:length(bin_vals)+1;
+                xtick_labels = bin_text;
             end
             set(gca,gca_opts{:},'ticklength',[0.015,0.015],'clipping','off','visible','on','xtick',xtick_vals,'xticklabels',xtick_labels);
             ylabel(y_text,'fontsize',12,'fontname','Helvetica');
